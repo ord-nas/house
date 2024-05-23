@@ -14,23 +14,34 @@
          const global_motion_graph = {
              nodes: {
                  "living_chair_1": [243, 1035],
+                 "living_chair_1_seated": [243, 975],
                  "living_chair_2": [307, 1035],
+                 "living_chair_2_seated": [307, 975],
                  "living_chair_3": [510, 1035],
+                 "living_chair_3_seated": [510, 975],
                  "kitchen_chair_1": [675, 1035],
+                 "kitchen_chair_1_seated": [675, 977],
                  "kitchen_chair_2": [725, 1035],
+                 "kitchen_chair_2_seated": [725, 977],
                  "kitchen_chair_3": [777, 1035],
+                 "kitchen_chair_3_seated": [777, 977],
                  "kitchen_chair_4": [827, 1035],
+                 "kitchen_chair_4_seated": [827, 977],
                  "kitchen_cooking": [1000, 1035],
                  "stairs_1_bottom": [1300, 1035],
                  "stairs_1_top": [1535, 763],
                  "stairs_2_bottom": [1300, 763],
                  "stairs_2_top": [1535, 490],
                  "desk_1": [242, 763],
+                 "desk_1_seated": [242, 700],
                  "desk_2": [433, 763],
+                 "desk_2_seated": [433, 700],
                  "bed_1": [685, 763], // Maybe adjust
                  "bed_2": [740, 763], // Maybe adjust
                  "tv_chair_1": [993, 763],
+                 "tv_chair_1_seated": [993, 680],
                  "tv_chair_2": [1055, 763],
+                 "tv_chair_2_seated": [1055, 680],
                  "bathroom_1": [210, 490],
                  "bathroom_2": [283, 490],
                  "bathroom_3": [356, 490],
@@ -60,6 +71,17 @@
                  ["bathroom_4", "bathroom_3"],
                  ["bathroom_3", "bathroom_2"],
                  ["bathroom_2", "bathroom_1"],
+                 ["living_chair_1", "living_chair_1_seated"],
+                 ["living_chair_2", "living_chair_2_seated"],
+                 ["living_chair_3", "living_chair_3_seated"],
+                 ["kitchen_chair_1", "kitchen_chair_1_seated"],
+                 ["kitchen_chair_2", "kitchen_chair_2_seated"],
+                 ["kitchen_chair_3", "kitchen_chair_3_seated"],
+                 ["kitchen_chair_4", "kitchen_chair_4_seated"],
+                 ["desk_1", "desk_1_seated"],
+                 ["desk_2", "desk_2_seated"],
+                 ["tv_chair_1", "tv_chair_1_seated"],
+                 ["tv_chair_2", "tv_chair_2_seated"],
              ],
          };
 
@@ -69,19 +91,30 @@
              };
          }
 
+         function continue_sitting_at(node) {
+             const seated_node = node + "_seated";
+             return (person) => {
+                 return new SequentialAni([
+                     new WalkAni(person.params, node, seated_node),
+                     new ContinueWavingAni(person.params, global_motion_graph.nodes[seated_node]),
+                     new WalkAni(person.params, seated_node, node),
+                 ]);
+             };
+         }
+
          const global_simple_targets = {
-             "living_chair_1": continue_waving_at("living_chair_1"),
-             "living_chair_2": continue_waving_at("living_chair_2"),
-             "living_chair_3": continue_waving_at("living_chair_3"),
-             "kitchen_chair_1": continue_waving_at("kitchen_chair_1"),
-             "kitchen_chair_2": continue_waving_at("kitchen_chair_2"),
-             "kitchen_chair_3": continue_waving_at("kitchen_chair_3"),
-             "kitchen_chair_4": continue_waving_at("kitchen_chair_4"),
+             "living_chair_1": continue_sitting_at("living_chair_1"),
+             "living_chair_2": continue_sitting_at("living_chair_2"),
+             "living_chair_3": continue_sitting_at("living_chair_3"),
+             "kitchen_chair_1": continue_sitting_at("kitchen_chair_1"),
+             "kitchen_chair_2": continue_sitting_at("kitchen_chair_2"),
+             "kitchen_chair_3": continue_sitting_at("kitchen_chair_3"),
+             "kitchen_chair_4": continue_sitting_at("kitchen_chair_4"),
              "kitchen_cooking": continue_waving_at("kitchen_cooking"),
-             "desk_1": continue_waving_at("desk_1"),
-             "desk_2": continue_waving_at("desk_2"),
-             "tv_chair_1": continue_waving_at("tv_chair_1"),
-             "tv_chair_2": continue_waving_at("tv_chair_2"),
+             "desk_1": continue_sitting_at("desk_1"),
+             "desk_2": continue_sitting_at("desk_2"),
+             "tv_chair_1": continue_sitting_at("tv_chair_1"),
+             "tv_chair_2": continue_sitting_at("tv_chair_2"),
              "gym": continue_waving_at("gym"),
          };
 
@@ -522,7 +555,7 @@
                              person.next_action_time = current_time + 3000; // TODO tweak.
                          }
                      } else if (current_time < person.next_action_time) {
-                         // Case 2: waiting for steady-state timeout.
+                         // Case 2: waiting for the correct time to start the next animation.
                      } else if (person.next_animation === null) {
                          // Case 3: try to pick another animation.
                          const targets = get_available_simple_targets(world);
@@ -576,22 +609,22 @@
                              images.david,
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
-                             /*bounce_period=*/900,
-                             /*arm_period=*/2200
+                             /*bounce_period=*/1100,
+                             /*arm_period=*/2000
                          ),
                          carlos: make_person(
                              images.carlos,
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
-                             /*bounce_period=*/900,
-                             /*arm_period=*/2200
+                             /*bounce_period=*/800,
+                             /*arm_period=*/1800
                          ),
                          sandro: make_person(
                              images.sandro,
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
-                             /*bounce_period=*/900,
-                             /*arm_period=*/2200
+                             /*bounce_period=*/1000,
+                             /*arm_period=*/1300
                          ),
                      },
                  };
