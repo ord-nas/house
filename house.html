@@ -8,6 +8,7 @@
              carlos: "imgs/people/carlos/Carlos Head.png",
              sandro: "imgs/people/sandro/Sandro Head.png",
              house: "imgs/house.png",
+             table: "imgs/table.png",
          };
 
          const global_motion_graph = {
@@ -470,6 +471,12 @@
                  if (global_ani !== null) {
                      global_ani.tick(current_time);
                  }
+                 var canvas = document.getElementById("c");
+                 var ctx = canvas.getContext("2d");
+                 ctx.scale(0.25, 0.25);
+                 ctx.translate(0, -500);
+                 ctx.drawImage(world.images.table, 0, 0);
+                 ctx.resetTransform();
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
