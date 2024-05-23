@@ -1,0 +1,358 @@
+<html>
+    <head>
+        <script type="text/javascript">
+         const global_image_urls = {
+             "steve": "imgs/Steve Head.png",
+             "house": "imgs/house.png",
+         };
+
+         function make_person() {
+             return {
+                 bounce: {
+                     offset_ms: 0,
+                     period_ms: 900,
+                 },
+                 arm: {
+                     offset_ms: 0,
+                     period_ms: 2200,
+                 },
+                 walking_speed_pps: 100,
+             };
+         }
+
+         function get_image_promise([key, url]) {
+             return new Promise((resolve, reject) => {
+                 const image = new Image();
+                 image.src = url;
+                 image.onload = () => { resolve({[key]: image}); };
+                 image.onerror = () => { reject("Failed to load: " + url); };
+             });
+         }
+
+         // Returns a promise that resolves to a map of all the images once they are loaded.
+         function load_images() {
+             const promises = Object.entries(global_image_urls).map(get_image_promise);
+             return Promise.all(promises).then((key_value_array) => {
+                 // Convert key-value array to dictionary.
+                 return Object.assign({}, ...key_value_array);
+             });
+         }
+         
+         function draw_arm(ctx, shoulder_x, shoulder_y, radius, length, rotation) {
+             ctx.save();
+             ctx.fillStyle = "blue";
+             
+             ctx.translate(shoulder_x, shoulder_y);
+             ctx.rotate(rotation);
+
+             ctx.beginPath();
+             ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+             ctx.fill();
+
+             ctx.beginPath();
+             ctx.arc(0, length, radius, 0, 2 * Math.PI);
+             ctx.fill();
+
+             ctx.fillRect(-radius, 0, 2 * radius, length);
+
+             ctx.restore();
+         }
+
+         function eased(time_ms, period_ms) {
+             const offset_ms = time_ms % period_ms;
+             return 0.5 - Math.cos(offset_ms / period_ms * 2 * Math.PI) / 2.0;
+         }
+
+         function get_wave_params_cyclic(person, current_time) {
+             return {
+                 arm_t: eased(current_time + person.arm.offset_ms, person.arm.period_ms),
+                 bounce_t: eased(current_time + person.bounce.offset_ms, person.bounce.period_ms),
+             };
+         }
+
+         function can_start(current_time, animation_start_time, p) {
+             const start_offset = (animation_start_time + p.offset_ms) % p.period_ms;
+             const till_end = p.period_ms - start_offset;
+             const elapsed = current_time - animation_start_time;
+             return elapsed > till_end;
+         }
+
+         function can_stop(current_time, animation_start_time, p) {
+             const start_iter = Math.floor((animation_start_time + p.offset_ms) / p.period_ms);
+             const current_iter = Math.floor((current_time + p.offset_ms) / p.period_ms);
+             return current_iter > start_iter;
+         }
+         
+         function get_wave_params_from_rest(person, current_time, animation_start_time) {
+             const can_start_arms = can_start(current_time, animation_start_time, person.arm);
+             const can_start_bounce = can_start(current_time, animation_start_time, person.bounce);
+             return {
+                 arm_t: can_start_arms ?
+                        eased(current_time + person.arm.offset_ms, person.arm.period_ms) :
+                        0.0,
+                 bounce_t: can_start_bounce ?
+                           eased(current_time + person.bounce.offset_ms, person.bounce.period_ms) :
+                           0.0,
+                 done: can_start_arms && can_start_bounce,
+             };
+         }
+
+         function get_wave_params_to_rest(person, current_time, animation_start_time) {
+             const can_stop_arms = can_stop(current_time, animation_start_time, person.arm);
+             const can_stop_bounce = can_stop(current_time, animation_start_time, person.bounce);
+             return {
+                 arm_t: can_stop_arms ?
+                        0.0 :
+                        eased(current_time + person.arm.offset_ms, person.arm.period_ms),
+                 bounce_t: can_stop_bounce ?
+                           0.0 :
+                           eased(current_time + person.bounce.offset_ms, person.bounce.period_ms),
+                 done: can_stop_arms && can_stop_bounce,
+             };
+         }
+
+         function draw_from_params(world, params) {
+             params.scale = 0.25;
+             // living_couch_1
+             /* params.x = 243;
+              * params.y = 975;*/
+
+             // desk_1
+             /* params.x = 242;
+              * params.y = 700;*/
+
+             // kitchen_table_1
+             /* params.x = 675;
+              * params.y = 977;*/
+
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+             ctx.resetTransform();
+
+             ctx.scale(0.25, 0.25);
+             ctx.translate(0, -500);
+             ctx.drawImage(world.images.house, 0, 0);
+             ctx.resetTransform();
+
+             for (var [x, y] of [[243, 975], [242, 700], [675, 977],
+                                 [725, 977], [777, 977], [827, 977]]) {
+                 ctx.save();
+                 params.x = x;
+                 params.y = y;
+                 
+                 // const arm_t = eased(current_time, /*period_ms=*/1200);
+                 // const bounce_t = eased(current_time, /*period_ms=*/2000);
+                 // const bounce_amount = bounce_t * 50;
+
+                 const bounce_amount = params.bounce_t * 20;
+
+                 const top = 320 + bounce_amount;
+                 const bottom = 320 + 200;
+                 const left = 70;
+
+                 ctx.scale(params.scale, params.scale);
+                 ctx.translate(-(50 + left + 170/2), -bottom);
+                 ctx.translate(params.x / params.scale, params.y / params.scale);
+
+                 ctx.fillStyle = "green";
+                 ctx.fillRect(50 + left, top, 170, (bottom - top));
+                 
+                 ctx.beginPath();
+                 ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+                 ctx.fill();
+
+                 const arm_offset_x = 10;
+                 const arm_offset_y = -30;
+                 draw_arm(ctx, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
+                 draw_arm(ctx, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
+                 
+                 // console.log("image load");
+                 ctx.drawImage(world.images.steve, 30 + left, bounce_amount);
+                 ctx.restore();
+             }
+         }
+
+         
+         // The API for an animation is:
+         //  * it has a tick() method that draws and returns whether the animation is done.
+         //  * it has a request_done() method.
+
+         class StartWavingAni {
+             constructor(world, person) {
+                 this.world = world;
+                 this.person = person;
+                 this.start_time = null;
+             }
+
+             tick(current_time) {
+                 console.log("start_waving_tick");
+                 if (this.start_time === null) {
+                     this.start_time = current_time;    
+                 }
+                 const params = get_wave_params_from_rest(this.person, current_time, this.start_time);
+                 draw_from_params(this.world, params);
+                 return params.done;
+             }
+
+             request_done() {}
+         }
+
+         class StopWavingAni {
+             constructor(world, person) {
+                 this.world = world;
+                 this.person = person;
+                 this.start_time = null;
+             }
+
+             tick(current_time) {
+                 if (this.start_time === null) {
+                     this.start_time = current_time;    
+                 }
+                 const params = get_wave_params_to_rest(this.person, current_time, this.start_time);
+                 draw_from_params(this.world, params);
+                 return params.done;
+             }
+
+             request_done() {}
+         }
+
+         class ContinueWavingAni {
+             constructor(world, person) {
+                 this.world = world;
+                 this.person = person;
+                 this.start_time = null;
+                 this.done = false;
+             }
+
+             tick(current_time) {
+                 if (this.start_time === null) {
+                     this.start_time = current_time;    
+                 }
+                 const params = get_wave_params_cyclic(this.person, current_time, this.start_time);
+                 draw_from_params(this.world, params);
+                 return this.done;
+             }
+
+             request_done() {
+                 this.done = true;
+             }
+         }
+
+         class SequentialAni {
+             constructor(sequence) {
+                 this.sequence = sequence;
+                 this.current = 0;
+             }
+
+             tick(current_time) {
+                 if (this.current >= this.sequence.length) {
+                     return true;
+                 }
+                 const next = this.sequence[this.current].tick(current_time);
+                 if (next) {
+                     this.current += 1;
+                 }
+                 return false;
+             }
+
+             request_done() {
+                 this.sequence.map((a) => { a.request_done(); });
+             }
+         }
+         
+         // An animation has three parts: head, body, tail.
+         // The head happens exactly once (finishing when it reports done).
+         // The body happens continuously for any length of time.
+         // The tail happens exactly one (finishing when it reports done).
+         // 
+         
+         function draw(world, last_draw_time, current_time) {
+             // console.log("draw");
+             // console.log(images);
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+             // const arm_t = eased(current_time, /*period_ms=*/1200);
+             // const bounce_t = eased(current_time, /*period_ms=*/2000);
+             // const bounce_amount = bounce_t * 50;
+
+             const wave_params = get_wave_params_to_rest(world.people.steve, current_time, world.animation_start_time);
+             const bounce_amount = wave_params.bounce_t * 20;
+
+             const top = 320 + bounce_amount;
+             const bottom = 320 + 200;
+             const left = 70;
+
+             ctx.fillStyle = "green";
+             ctx.fillRect(50 + left, top, 170, (bottom - top));
+             
+             ctx.beginPath();
+             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+             ctx.fill();
+
+             const arm_offset_x = 10;
+             const arm_offset_y = -30;
+             draw_arm(ctx, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * wave_params.arm_t);
+             draw_arm(ctx, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * wave_params.arm_t);
+             
+             // console.log("image load");
+             ctx.drawImage(world.images.steve, 30 + left, bounce_amount);
+         }
+
+         var global_ani = null;
+         var global_world = null;
+
+         function start_ani() {
+             if (global_world === null) return;
+             console.log("start_ani");
+             global_ani = new SequentialAni([
+                 new StartWavingAni(global_world, global_world.people.steve),
+                 new ContinueWavingAni(global_world, global_world.people.steve),
+                 new StopWavingAni(global_world, global_world.people.steve),
+             ]);
+         }
+
+         function stop_ani() {
+             if (global_ani !== null) {
+                 global_ani.request_done();
+             }
+         }
+
+         function set_up_animation_loop(world) {
+             global_world = world;
+             function tick() {
+                 const current_time = new Date().getTime();
+                 if (global_ani !== null) {
+                     global_ani.tick(current_time);
+                 }
+                 window.requestAnimationFrame(tick);
+             }
+             window.requestAnimationFrame(tick);
+         }
+
+         function main() {
+             load_images().then((images) => {
+                 const world = {
+                     images: images,
+                     people: {
+                         steve: make_person(),
+                     },
+                     animation_start_time: new Date().getTime(),
+                 };
+                 set_up_animation_loop(world);
+                 start_ani();
+             });
+         }
+         
+         window.onload = main;
+         console.log("test");
+        </script>
+    </head>
+    <body>
+        <canvas id="c" width="2300px" height="1100px"> </canvas>
+        <button onclick="start_ani()">Start</button>
+        <button onclick="stop_ani()">Stop</button>
+    </body>
+</html>
