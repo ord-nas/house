@@ -434,28 +434,7 @@
              }
          }
 
-         var global_ani = null;
-         var global_world = null;
-
-         function start_ani() {
-             if (global_world === null) return;
-             console.log("start_ani");
-             global_ani = new SequentialAni([
-                 new StartWavingAni(global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                 //new ContinueWavingAni(global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                 new WalkAni(global_world.people.steve.params, "living_chair_2", "gym"),
-                 new StopWavingAni(global_world.people.steve.params, global_motion_graph.nodes.gym),
-             ]);
-         }
-
-         function stop_ani() {
-             if (global_ani !== null) {
-                 global_ani.request_done();
-             }
-         }
-
          function set_up_animation_loop(world) {
-             global_world = world;
              function tick() {
                  const current_time = new Date().getTime();
 
@@ -471,8 +450,10 @@
                  ctx.drawImage(world.images.house, 0, 0);
 
                  // Animate.
-                 if (global_ani !== null) {
-                     global_ani.tick(current_time);
+                 for (var [name, person] of Object.entries(world.people)) {
+                     if (person.animation !== null) {
+                         person.animation.tick(current_time);
+                     }
                  }
 
                  // Draw table.
@@ -499,10 +480,14 @@
                              /*arm_period=*/2200
                          ),
                      },
-                     animation_start_time: new Date().getTime(),
                  };
+                 world.people.steve.animation = new SequentialAni([
+                     new StartWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                     //new ContinueWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                     new WalkAni(world.people.steve.params, "living_chair_2", "gym"),
+                     new StopWavingAni(world.people.steve.params, global_motion_graph.nodes.gym),
+                 ]);
                  set_up_animation_loop(world);
-                 start_ani();
              });
          }
 
@@ -512,7 +497,5 @@
     </head>
     <body>
         <canvas id="c" width="2300px" height="1100px"> </canvas>
-        <button onclick="start_ani()">Start</button>
-        <button onclick="stop_ani()">Stop</button>
     </body>
 </html>
