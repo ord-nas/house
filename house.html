@@ -524,7 +524,7 @@
                  if (next) {
                      this.current += 1;
                  }
-                 return false;
+                 return this.current >= this.sequence.length;
              }
 
              request_done() {
