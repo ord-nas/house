@@ -2,7 +2,8 @@
     <head>
         <script type="text/javascript">
          const global_image_urls = {
-             "steve": "imgs/Steve Head.png",
+             "steve": "imgs/people/steve/Steve Head.png",
+             "david": "imgs/people/david/David Head.png",
              "house": "imgs/house.png",
          };
 
@@ -135,8 +136,8 @@
              ctx.drawImage(world.images.house, 0, 0);
              ctx.resetTransform();
 
-             for (var [x, y] of [[243, 975], [242, 700], [675, 977],
-                                 [725, 977], [777, 977], [827, 977]]) {
+             for (var [x, y, person] of [[243, 975, "david"], [242, 700, "steve"], [675, 977, "david"],
+                                         [725, 977, "steve"], [777, 977, "david"], [827, 977, "steve"]]) {
                  ctx.save();
                  params.x = x;
                  params.y = y;
@@ -168,7 +169,7 @@
                  draw_arm(ctx, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
                  
                  // console.log("image load");
-                 ctx.drawImage(world.images.steve, 30 + left, bounce_amount);
+                 ctx.drawImage(world.images[person], 30 + left, bounce_amount);
                  ctx.restore();
              }
          }
