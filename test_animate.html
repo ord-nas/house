@@ -173,10 +173,19 @@
              }
          }
 
+         // A person has the follow properties:
+         //  * params
+         //  * currently-active animation
+         //  * time at which the next action should be chosen (can be null)
+         //  * next event to participate in (can be null)
+
          
          // The API for an animation is:
          //  * it has a tick() method that draws and returns whether the animation is done.
          //  * it has a request_done() method.
+         //  * it has a can_request_done() method that returns true or false.
+         //  * it has a resouce_events() method that returns an ordered list of resource acquire and relinquish events.
+         //  * it has a resouces() method that returns a list of all currently-held resources.
 
          class StartWavingAni {
              constructor(world, person) {
