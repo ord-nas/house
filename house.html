@@ -61,23 +61,62 @@
                  ["bathroom_3", "bathroom_2"],
                  ["bathroom_2", "bathroom_1"],
              ],
-             targets: [
-                 "living_chair_1",
-                 "living_chair_2",
-                 "living_chair_3",
-                 "kitchen_chair_1",
-                 "kitchen_chair_2",
-                 "kitchen_chair_3",
-                 "kitchen_chair_4",
-                 "kitchen_cooking",
-                 "desk_1",
-                 "desk_2",
-                 "tv_chair_1",
-                 "tv_chair_2",
-                 "gym",
-             ],
          };
 
+         function continue_waving_at(node) {
+             return (person) => {
+                 return new ContinueWavingAni(person.params, global_motion_graph.nodes[node]);
+             };
+         }
+
+         const global_simple_targets = {
+             "living_chair_1": continue_waving_at("living_chair_1"),
+             "living_chair_2": continue_waving_at("living_chair_2"),
+             "living_chair_3": continue_waving_at("living_chair_3"),
+             "kitchen_chair_1": continue_waving_at("kitchen_chair_1"),
+             "kitchen_chair_2": continue_waving_at("kitchen_chair_2"),
+             "kitchen_chair_3": continue_waving_at("kitchen_chair_3"),
+             "kitchen_chair_4": continue_waving_at("kitchen_chair_4"),
+             "kitchen_cooking": continue_waving_at("kitchen_cooking"),
+             "desk_1": continue_waving_at("desk_1"),
+             "desk_2": continue_waving_at("desk_2"),
+             "tv_chair_1": continue_waving_at("tv_chair_1"),
+             "tv_chair_2": continue_waving_at("tv_chair_2"),
+             "gym": continue_waving_at("gym"),
+         };
+
+         function get_held_resources(world) {
+             var resources = [];
+             for (const [name, person] of Object.entries(world.people)) {
+                 if (person.location !== null) {
+                     resources.push(person.location);
+                 }
+                 if (person.next_location !== null) {
+                     resources.push(person.next_location);
+                 }
+             }
+             return new Set(resources);
+         }
+
+         function get_available_simple_targets(world) {
+             const held_resources = get_held_resources(world);
+             var available_targets = {};
+             for (const [key, value] of Object.entries(global_simple_targets)) {
+                 if (!held_resources.has(key)) {
+                     available_targets[key] = value;
+                 }
+             }
+             return available_targets;
+         }
+
+         function get_random_key_value(d) {
+             const arr = Object.entries(d);
+             if (arr.length == 0) {
+                 return null;
+             }
+             return arr[Math.floor(Math.random() * arr.length)];
+         }
+         
          function get_graph_neighbors() {
              var neighbors = {};
              for (var [n1, n2] of global_motion_graph.edges) {
@@ -164,6 +203,9 @@
                  },
                  animation: null,
                  next_action_time: null,
+                 location: null,
+                 next_animation: null,
+                 next_location: null,
                  next_event: null,
              };
          }
@@ -290,19 +332,10 @@
              ctx.resetTransform();
          }
 
-         // A person has the follow properties:
-         //  * params
-         //  * currently-active animation
-         //  * time at which the next action should be chosen (can be null)
-         //  * next event to participate in (can be null)
-
-
          // The API for an animation is:
          //  * it has a tick() method that draws and returns whether the animation is done.
          //  * it has a request_done() method.
          //  * it has a can_request_done() method that returns true or false.
-         //  * it has a resouce_events() method that returns an ordered list of resource acquire and relinquish events.
-         //  * it has a resouces() method that returns a list of all currently-held resources.
 
          class StartWavingAni {
              constructor(person_params, [x, y]) {
@@ -328,6 +361,8 @@
              }
 
              request_done() {}
+             
+             can_request_done() { return false; }
          }
 
          class StopWavingAni {
@@ -353,6 +388,8 @@
              }
 
              request_done() {}
+             
+             can_request_done() { return false; }
          }
 
          class ContinueWavingAni {
@@ -381,6 +418,8 @@
              request_done() {
                  this.done = true;
              }
+
+             can_request_done() { return true; }
          }
 
          class WalkAni {
@@ -410,6 +449,8 @@
              }
 
              request_done() {}
+
+             can_request_done() { return false; }
          }
 
          class SequentialAni {
@@ -432,6 +473,11 @@
              request_done() {
                  this.sequence.map((a) => { a.request_done(); });
              }
+
+             can_request_done() {
+                 const index = Math.min(this.current, this.sequence.length - 1);
+                 return this.sequence[index].can_request_done();
+             }
          }
 
          function set_up_animation_loop(world) {
@@ -451,10 +497,46 @@
 
                  // Animate.
                  for (var [name, person] of Object.entries(world.people)) {
-                     if (person.animation !== null) {
-                         person.animation.tick(current_time);
+                     if (person.animation === null) {
+                         // Nothing to animate.
+                         continue;
+                     }
+
+                     const done = person.animation.tick(current_time);
+                     
+                     if (person.next_action_time === null) {
+                         // Case 1: not yet in the steady-state for this animation.
+                         const in_steady_state = person.animation.can_request_done();
+                         if (in_steady_state) {
+                             person.next_action_time = current_time + 3000; // TODO tweak.
+                         }
+                     } else if (current_time < person.next_action_time) {
+                         // Case 2: waiting for steady-state timeout.
+                     } else if (person.next_animation === null) {
+                         // Case 3: try to pick another animation.
+                         const targets = get_available_simple_targets(world);
+                         const kv = get_random_key_value(targets);
+                         if (kv !== null) {
+                             const [location, make_ani_fn] = kv;
+                             person.next_location = location;
+                             person.next_animation = new SequentialAni([
+                                 new WalkAni(person.params, person.location, person.next_location),
+                                 make_ani_fn(person),
+                             ]);
+                             person.animation.request_done();
+                         }
+                     } else if (!done) {
+                         // Case 4: waiting for current animation to be done so we can start the next one.
+                     } else {
+                         // Case 5: move on to the next animation.
+                         person.animation = person.next_animation;
+                         person.next_action_time = null;
+                         person.location = person.next_location;
+                         person.next_animation = null;
+                         person.next_location = null;
                      }
                  }
+                 
 
                  // Draw table.
                  ctx.resetTransform();
@@ -481,12 +563,14 @@
                          ),
                      },
                  };
-                 world.people.steve.animation = new SequentialAni([
-                     new StartWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                     //new ContinueWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                     new WalkAni(world.people.steve.params, "living_chair_2", "gym"),
-                     new StopWavingAni(world.people.steve.params, global_motion_graph.nodes.gym),
-                 ]);
+                 world.people.steve.animation = new ContinueWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2);
+                 world.people.steve.location = "living_chair_2";
+                 /* world.people.steve.animation = new SequentialAni([
+                  *     new StartWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                  *     //new ContinueWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                  *     new WalkAni(world.people.steve.params, "living_chair_2", "gym"),
+                  *     new StopWavingAni(world.people.steve.params, global_motion_graph.nodes.gym),
+                  * ]);*/
                  set_up_animation_loop(world);
              });
          }
