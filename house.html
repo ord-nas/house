@@ -259,15 +259,9 @@
              };
          }
 
-         function draw_from_params(world, params) {
+         function draw_from_params(params) {
              var canvas = document.getElementById("c");
              var ctx = canvas.getContext("2d");
-             ctx.clearRect(0, 0, canvas.width, canvas.height);
-             ctx.resetTransform();
-
-             ctx.scale(0.25, 0.25);
-             ctx.translate(0, -500);
-             ctx.drawImage(world.images.house, 0, 0);
              ctx.resetTransform();
 
              const bounce_amount = params.bounce_t * 20;
@@ -311,8 +305,7 @@
          //  * it has a resouces() method that returns a list of all currently-held resources.
 
          class StartWavingAni {
-             constructor(world, person_params, [x, y]) {
-                 this.world = world;
+             constructor(person_params, [x, y]) {
                  this.person_params = person_params;
                  this.x = x;
                  this.y = y;
@@ -330,7 +323,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_from_rest(this.person_params, current_time, this.start_time));
-                 draw_from_params(this.world, params);
+                 draw_from_params(params);
                  return params.done;
              }
 
@@ -338,8 +331,7 @@
          }
 
          class StopWavingAni {
-             constructor(world, person_params, [x, y]) {
-                 this.world = world;
+             constructor(person_params, [x, y]) {
                  this.person_params = person_params;
                  this.x = x;
                  this.y = y;
@@ -356,7 +348,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_to_rest(this.person_params, current_time, this.start_time));
-                 draw_from_params(this.world, params);
+                 draw_from_params(params);
                  return params.done;
              }
 
@@ -364,8 +356,7 @@
          }
 
          class ContinueWavingAni {
-             constructor(world, person_params, [x, y]) {
-                 this.world = world;
+             constructor(person_params, [x, y]) {
                  this.person_params = person_params;
                  this.x = x;
                  this.y = y;
@@ -383,7 +374,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
-                 draw_from_params(this.world, params);
+                 draw_from_params(params);
                  return this.done;
              }
 
@@ -393,8 +384,7 @@
          }
 
          class WalkAni {
-             constructor(world, person_params, start_node, end_node) {
-                 this.world = world;
+             constructor(person_params, start_node, end_node) {
                  this.person_params = person_params;
                  this.start_node = start_node;
                  this.end_node = end_node;
@@ -415,7 +405,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
-                 draw_from_params(this.world, params);
+                 draw_from_params(params);
                  return path_point.finished;
              }
 
@@ -451,10 +441,10 @@
              if (global_world === null) return;
              console.log("start_ani");
              global_ani = new SequentialAni([
-                 new StartWavingAni(global_world, global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                 //new ContinueWavingAni(global_world, global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                 new WalkAni(global_world, global_world.people.steve.params, "living_chair_2", "gym"),
-                 new StopWavingAni(global_world, global_world.people.steve.params, global_motion_graph.nodes.gym),
+                 new StartWavingAni(global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                 //new ContinueWavingAni(global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                 new WalkAni(global_world.people.steve.params, "living_chair_2", "gym"),
+                 new StopWavingAni(global_world.people.steve.params, global_motion_graph.nodes.gym),
              ]);
          }
 
@@ -468,15 +458,29 @@
              global_world = world;
              function tick() {
                  const current_time = new Date().getTime();
+
+                 // Clear.
+                 var canvas = document.getElementById("c");
+                 var ctx = canvas.getContext("2d");
+                 ctx.resetTransform();
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                 // Draw house.
+                 ctx.scale(0.25, 0.25);
+                 ctx.translate(0, -500);
+                 ctx.drawImage(world.images.house, 0, 0);
+
+                 // Animate.
                  if (global_ani !== null) {
                      global_ani.tick(current_time);
                  }
-                 var canvas = document.getElementById("c");
-                 var ctx = canvas.getContext("2d");
+
+                 // Draw table.
+                 ctx.resetTransform();
                  ctx.scale(0.25, 0.25);
                  ctx.translate(0, -500);
                  ctx.drawImage(world.images.table, 0, 0);
-                 ctx.resetTransform();
+
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
