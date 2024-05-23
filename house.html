@@ -59,19 +59,110 @@
                  ["bathroom_3", "bathroom_2"],
                  ["bathroom_2", "bathroom_1"],
              ],
+             targets: [
+                 "living_chair_1",
+                 "living_chair_2",
+                 "living_chair_3",
+                 "kitchen_chair_1",
+                 "kitchen_chair_2",
+                 "kitchen_chair_3",
+                 "kitchen_chair_4",
+                 "kitchen_cooking",
+                 "desk_1",
+                 "desk_2",
+                 "tv_chair_1",
+                 "tv_chair_2",
+                 "gym",
+             ],
          };
 
-         function make_person() {
+         function get_graph_neighbors() {
+             var neighbors = {};
+             for (var [n1, n2] of global_motion_graph.edges) {
+                 if (!neighbors.hasOwnProperty(n1)) neighbors[n1] = [];
+                 if (!neighbors.hasOwnProperty(n2)) neighbors[n2] = [];
+                 neighbors[n1].push(n2);
+                 neighbors[n2].push(n1);
+             }
+             return neighbors;
+         }
+         
+         function get_path(start_node, end_node) {
+             // Get neighbors of each node.
+             const neighbors = get_graph_neighbors();
+
+             // DFS the graph from start_node.
+             var backtrace = {[start_node]: null};
+             var queue = [start_node];
+             while (queue.length > 0) {
+                 const current = queue.shift();
+                 for (const next of neighbors[current]) {
+                     if (backtrace.hasOwnProperty(next)) continue;
+                     backtrace[next] = current;
+                     queue.push(next);
+                 }
+             }
+
+             // Construct the path by following backtraces from end_node.
+             var path = [];
+             var node = end_node;
+             while (node !== null && node !== undefined) {
+                 path.push(node);
+                 node = backtrace[node];
+             }
+             path.reverse();
+             return path;
+         }
+
+         function lerp(a, b, t) {
+             return a + (b - a) * t;
+         }
+         
+         // Returns {p: [x, y], finished: bool}.
+         function get_point_along_path(path, pixels) {
+             for (var i = 0; i < path.length - 1; i += 1) {
+                 const [x1, y1] = global_motion_graph.nodes[path[i]];
+                 const [x2, y2] = global_motion_graph.nodes[path[i+1]];
+                 const distance = Math.sqrt((x2 - x1)**2 + (y2 - y1)**2);
+                 if (pixels <= distance) {
+                     const frac = pixels / distance;
+                     const x = lerp(x1, x2, frac);   
+                     const y = lerp(y1, y2, frac);
+                     return {
+                         p: [x, y],
+                         finished: false,
+                     };
+                 }
+                 pixels -= distance;
+             }
+
+             // If we get here, we've finished the path.
              return {
-                 bounce: {
-                     offset_ms: 0,
-                     period_ms: 900,
+                 p: global_motion_graph.nodes[path[path.length-1]],
+                 finished: true,
+             };
+         }
+
+         function make_person(head_image, arm_color, body_color, bounce_period, arm_period) {
+             return {
+                 params: {
+                     head_image: head_image,
+                     scale: 0.25,
+                     arm_color: arm_color,
+                     body_color: body_color,
+                     bounce: {
+                         offset_ms: 0,
+                         period_ms: bounce_period,
+                     },
+                     arm: {
+                         offset_ms: 0,
+                         period_ms: arm_period,
+                     },
+                     walking_speed_pps: 150,
                  },
-                 arm: {
-                     offset_ms: 0,
-                     period_ms: 2200,
-                 },
-                 walking_speed_pps: 100,
+                 animation: null,
+                 next_action_time: null,
+                 next_event: null,
              };
          }
 
@@ -93,9 +184,9 @@
              });
          }
          
-         function draw_arm(ctx, shoulder_x, shoulder_y, radius, length, rotation) {
+         function draw_arm(ctx, color, shoulder_x, shoulder_y, radius, length, rotation) {
              ctx.save();
-             ctx.fillStyle = "blue";
+             ctx.fillStyle = color;
              
              ctx.translate(shoulder_x, shoulder_y);
              ctx.rotate(rotation);
@@ -167,19 +258,6 @@
          }
 
          function draw_from_params(world, params) {
-             params.scale = 0.25;
-             // living_couch_1
-             /* params.x = 243;
-              * params.y = 975;*/
-
-             // desk_1
-             /* params.x = 242;
-              * params.y = 700;*/
-
-             // kitchen_table_1
-             /* params.x = 675;
-              * params.y = 977;*/
-
              var canvas = document.getElementById("c");
              var ctx = canvas.getContext("2d");
              ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -190,58 +268,30 @@
              ctx.drawImage(world.images.house, 0, 0);
              ctx.resetTransform();
 
-             for (var [x, y, person] of [[778, 490, "david"]]) {
-                 /* for (var [x, y, person] of [[243, 975, "david"], [242, 700, "steve"], [675, 977, "david"],
-                  *                             [725, 977, "steve"], [777, 977, "carlos"], [827, 977, "sandro"], [993, 680, "david"]]) {*/
-                 ctx.save();
-                 params.x = x;
-                 params.y = y;
-                 
-                 // const arm_t = eased(current_time, /*period_ms=*/1200);
-                 // const bounce_t = eased(current_time, /*period_ms=*/2000);
-                 // const bounce_amount = bounce_t * 50;
+             const bounce_amount = params.bounce_t * 20;
 
-                 const bounce_amount = params.bounce_t * 20;
+             const top = 320 + bounce_amount;
+             const bottom = 320 + 200;
+             const left = 70;
 
-                 const top = 320 + bounce_amount;
-                 const bottom = 320 + 200;
-                 const left = 70;
+             ctx.scale(params.scale, params.scale);
+             ctx.translate(-(50 + left + 170/2), -bottom);
+             ctx.translate(params.x / params.scale, params.y / params.scale);
 
-                 ctx.scale(params.scale, params.scale);
-                 ctx.translate(-(50 + left + 170/2), -bottom);
-                 ctx.translate(params.x / params.scale, params.y / params.scale);
+             ctx.fillStyle = params.body_color;
+             ctx.fillRect(50 + left, top, 170, (bottom - top));
+             
+             ctx.beginPath();
+             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+             ctx.fill();
 
-                 ctx.fillStyle = "green";
-                 ctx.fillRect(50 + left, top, 170, (bottom - top));
-                 
-                 ctx.beginPath();
-                 ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
-                 ctx.fill();
-
-                 const arm_offset_x = 10;
-                 const arm_offset_y = -30;
-                 draw_arm(ctx, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
-                 draw_arm(ctx, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
-                 
-                 // console.log("image load");
-                 ctx.drawImage(world.images[person], 30 + left, bounce_amount);
-                 ctx.restore();
-             }
-
-             for (const [key, [x, y]] of Object.entries(global_motion_graph.nodes)) {
-                 ctx.beginPath();
-                 ctx.arc(x, y, 10, 0, 2 * Math.PI);
-                 ctx.fill();
-             }
-
-             for (const [n1, n2] of global_motion_graph.edges) {
-                 const [x1, y1] = global_motion_graph.nodes[n1];
-                 const [x2, y2] = global_motion_graph.nodes[n2];
-                 ctx.beginPath();
-                 ctx.moveTo(x1, y1);
-                 ctx.lineTo(x2, y2);
-                 ctx.stroke();
-             }
+             const arm_offset_x = 10;
+             const arm_offset_y = -30;
+             draw_arm(ctx, params.arm_color, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
+             draw_arm(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
+             
+             ctx.drawImage(params.head_image, 30 + left, bounce_amount);
+             ctx.resetTransform();
          }
 
          // A person has the follow properties:
@@ -259,9 +309,11 @@
          //  * it has a resouces() method that returns a list of all currently-held resources.
 
          class StartWavingAni {
-             constructor(world, person) {
+             constructor(world, person_params, [x, y]) {
                  this.world = world;
-                 this.person = person;
+                 this.person_params = person_params;
+                 this.x = x;
+                 this.y = y;
                  this.start_time = null;
              }
 
@@ -270,7 +322,12 @@
                  if (this.start_time === null) {
                      this.start_time = current_time;    
                  }
-                 const params = get_wave_params_from_rest(this.person, current_time, this.start_time);
+                 var params = {
+                     x: this.x,
+                     y: this.y,
+                 };
+                 Object.assign(params, this.person_params);
+                 Object.assign(params, get_wave_params_from_rest(this.person_params, current_time, this.start_time));
                  draw_from_params(this.world, params);
                  return params.done;
              }
@@ -279,9 +336,11 @@
          }
 
          class StopWavingAni {
-             constructor(world, person) {
+             constructor(world, person_params, [x, y]) {
                  this.world = world;
-                 this.person = person;
+                 this.person_params = person_params;
+                 this.x = x;
+                 this.y = y;
                  this.start_time = null;
              }
 
@@ -289,7 +348,12 @@
                  if (this.start_time === null) {
                      this.start_time = current_time;    
                  }
-                 const params = get_wave_params_to_rest(this.person, current_time, this.start_time);
+                 var params = {
+                     x: this.x,
+                     y: this.y,
+                 };
+                 Object.assign(params, this.person_params);
+                 Object.assign(params, get_wave_params_to_rest(this.person_params, current_time, this.start_time));
                  draw_from_params(this.world, params);
                  return params.done;
              }
@@ -298,9 +362,11 @@
          }
 
          class ContinueWavingAni {
-             constructor(world, person) {
+             constructor(world, person_params, [x, y]) {
                  this.world = world;
-                 this.person = person;
+                 this.person_params = person_params;
+                 this.x = x;
+                 this.y = y;
                  this.start_time = null;
                  this.done = false;
              }
@@ -309,7 +375,12 @@
                  if (this.start_time === null) {
                      this.start_time = current_time;    
                  }
-                 const params = get_wave_params_cyclic(this.person, current_time, this.start_time);
+                 var params = {
+                     x: this.x,
+                     y: this.y,
+                 };
+                 Object.assign(params, this.person_params);
+                 Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
                  draw_from_params(this.world, params);
                  return this.done;
              }
@@ -317,6 +388,36 @@
              request_done() {
                  this.done = true;
              }
+         }
+
+         class WalkAni {
+             constructor(world, person_params, start_node, end_node) {
+                 this.world = world;
+                 this.person_params = person_params;
+                 this.start_node = start_node;
+                 this.end_node = end_node;
+                 this.path = get_path(start_node, end_node);
+                 this.start_time = null;
+                 this.done = false;
+             }
+
+             tick(current_time) {
+                 if (this.start_time === null) {
+                     this.start_time = current_time;    
+                 }
+                 const pixels = (current_time - this.start_time) / 1000 * this.person_params.walking_speed_pps;
+                 const path_point = get_point_along_path(this.path, pixels);
+                 var params = {
+                     x: path_point.p[0],
+                     y: path_point.p[1],
+                 };
+                 Object.assign(params, this.person_params);
+                 Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
+                 draw_from_params(this.world, params);
+                 return path_point.finished;
+             }
+
+             request_done() {}
          }
 
          class SequentialAni {
@@ -341,46 +442,6 @@
              }
          }
          
-         // An animation has three parts: head, body, tail.
-         // The head happens exactly once (finishing when it reports done).
-         // The body happens continuously for any length of time.
-         // The tail happens exactly one (finishing when it reports done).
-         // 
-         
-         function draw(world, last_draw_time, current_time) {
-             // console.log("draw");
-             // console.log(images);
-             var canvas = document.getElementById("c");
-             var ctx = canvas.getContext("2d");
-             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-             // const arm_t = eased(current_time, /*period_ms=*/1200);
-             // const bounce_t = eased(current_time, /*period_ms=*/2000);
-             // const bounce_amount = bounce_t * 50;
-
-             const wave_params = get_wave_params_to_rest(world.people.steve, current_time, world.animation_start_time);
-             const bounce_amount = wave_params.bounce_t * 20;
-
-             const top = 320 + bounce_amount;
-             const bottom = 320 + 200;
-             const left = 70;
-
-             ctx.fillStyle = "green";
-             ctx.fillRect(50 + left, top, 170, (bottom - top));
-             
-             ctx.beginPath();
-             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
-             ctx.fill();
-
-             const arm_offset_x = 10;
-             const arm_offset_y = -30;
-             draw_arm(ctx, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * wave_params.arm_t);
-             draw_arm(ctx, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * wave_params.arm_t);
-             
-             // console.log("image load");
-             ctx.drawImage(world.images.steve, 30 + left, bounce_amount);
-         }
-
          var global_ani = null;
          var global_world = null;
 
@@ -388,9 +449,10 @@
              if (global_world === null) return;
              console.log("start_ani");
              global_ani = new SequentialAni([
-                 new StartWavingAni(global_world, global_world.people.steve),
-                 new ContinueWavingAni(global_world, global_world.people.steve),
-                 new StopWavingAni(global_world, global_world.people.steve),
+                 new StartWavingAni(global_world, global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                 //new ContinueWavingAni(global_world, global_world.people.steve.params, global_motion_graph.nodes.living_chair_2),
+                 new WalkAni(global_world, global_world.people.steve.params, "living_chair_2", "gym"),
+                 new StopWavingAni(global_world, global_world.people.steve.params, global_motion_graph.nodes.gym),
              ]);
          }
 
@@ -417,7 +479,13 @@
                  const world = {
                      images: images,
                      people: {
-                         steve: make_person(),
+                         steve: make_person(
+                             images.steve,
+                             /*arm_color=*/"blue",
+                             /*body_color=*/"green",
+                             /*bounce_period=*/900,
+                             /*arm_period=*/2200
+                         ),
                      },
                      animation_start_time: new Date().getTime(),
                  };
