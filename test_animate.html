@@ -25,7 +25,9 @@
                  "kitchen_chair_3_seated": [777, 977],
                  "kitchen_chair_4": [827, 1035],
                  "kitchen_chair_4_seated": [827, 977],
-                 "kitchen_cooking": [1000, 1035],
+                 "kitchen_stove": [967, 1035],
+                 "kitchen_sink": [1100, 1035],
+                 "kitchen_fridge": [1235, 1035],
                  "stairs_1_bottom": [1300, 1035],
                  "stairs_1_top": [1535, 763],
                  "stairs_2_bottom": [1300, 763],
@@ -44,7 +46,9 @@
                  "bathroom_2": [283, 490],
                  "bathroom_3": [356, 490],
                  "bathroom_4": [430, 490],
-                 "gym": [778, 490],
+                 "gym_bar": [778, 490],
+                 "gym_bike": [588, 490],
+                 "gym_bike_seated": [588, 435],
              },
              edges: [
                  ["living_chair_1", "living_chair_2"],
@@ -53,8 +57,10 @@
                  ["kitchen_chair_1", "kitchen_chair_2"],
                  ["kitchen_chair_2", "kitchen_chair_3"],
                  ["kitchen_chair_3", "kitchen_chair_4"],
-                 ["kitchen_chair_4", "kitchen_cooking"],
-                 ["kitchen_cooking", "stairs_1_bottom"],
+                 ["kitchen_chair_4", "kitchen_stove"],
+                 ["kitchen_stove", "kitchen_sink"],
+                 ["kitchen_sink", "kitchen_fridge"],
+                 ["kitchen_fridge", "stairs_1_bottom"],
                  ["stairs_1_bottom", "stairs_1_top"],
                  ["stairs_1_top", "stairs_2_bottom"],
                  ["stairs_2_bottom", "stairs_2_top"],
@@ -64,8 +70,9 @@
                  ["bed_2", "bed_1"],
                  ["bed_1", "desk_2"],
                  ["desk_2", "desk_1"],
-                 ["stairs_2_top", "gym"],
-                 ["gym", "bathroom_4"],
+                 ["stairs_2_top", "gym_bar"],
+                 ["gym_bar", "gym_bike"],
+                 ["gym_bike", "bathroom_4"],
                  ["bathroom_4", "bathroom_3"],
                  ["bathroom_3", "bathroom_2"],
                  ["bathroom_2", "bathroom_1"],
@@ -80,6 +87,7 @@
                  ["desk_2", "desk_2_seated"],
                  ["tv_chair_1", "tv_chair_1_seated"],
                  ["tv_chair_2", "tv_chair_2_seated"],
+                 ["gym_bike", "gym_bike_seated"],
              ],
          };
 
@@ -212,7 +220,7 @@
              ctx.drawImage(world.images.house, 0, 0);
              ctx.resetTransform();
 
-             for (var [x, y, person] of [[778, 490, "david"]]) {
+             for (var [x, y, person] of [[588, 435, "david"]]) {
                  /* for (var [x, y, person] of [[243, 975, "david"], [242, 700, "steve"], [675, 977, "david"],
                   *                             [725, 977, "steve"], [777, 977, "carlos"], [827, 977, "sandro"], [993, 680, "david"]]) {*/
                  ctx.save();

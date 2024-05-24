@@ -28,7 +28,9 @@
                  "kitchen_chair_3_seated": [777, 977],
                  "kitchen_chair_4": [827, 1035],
                  "kitchen_chair_4_seated": [827, 977],
-                 "kitchen_cooking": [1000, 1035],
+                 "kitchen_stove": [967, 1035],
+                 "kitchen_sink": [1100, 1035],
+                 "kitchen_fridge": [1235, 1035],
                  "stairs_1_bottom": [1300, 1035],
                  "stairs_1_top": [1535, 763],
                  "stairs_2_bottom": [1300, 763],
@@ -47,7 +49,9 @@
                  "bathroom_2": [283, 490],
                  "bathroom_3": [356, 490],
                  "bathroom_4": [430, 490],
-                 "gym": [778, 490],
+                 "gym_bar": [778, 490],
+                 "gym_bike": [588, 490],
+                 "gym_bike_seated": [588, 435],
              },
              edges: [
                  ["living_chair_1", "living_chair_2"],
@@ -56,8 +60,10 @@
                  ["kitchen_chair_1", "kitchen_chair_2"],
                  ["kitchen_chair_2", "kitchen_chair_3"],
                  ["kitchen_chair_3", "kitchen_chair_4"],
-                 ["kitchen_chair_4", "kitchen_cooking"],
-                 ["kitchen_cooking", "stairs_1_bottom"],
+                 ["kitchen_chair_4", "kitchen_stove"],
+                 ["kitchen_stove", "kitchen_sink"],
+                 ["kitchen_sink", "kitchen_fridge"],
+                 ["kitchen_fridge", "stairs_1_bottom"],
                  ["stairs_1_bottom", "stairs_1_top"],
                  ["stairs_1_top", "stairs_2_bottom"],
                  ["stairs_2_bottom", "stairs_2_top"],
@@ -67,8 +73,9 @@
                  ["bed_2", "bed_1"],
                  ["bed_1", "desk_2"],
                  ["desk_2", "desk_1"],
-                 ["stairs_2_top", "gym"],
-                 ["gym", "bathroom_4"],
+                 ["stairs_2_top", "gym_bar"],
+                 ["gym_bar", "gym_bike"],
+                 ["gym_bike", "bathroom_4"],
                  ["bathroom_4", "bathroom_3"],
                  ["bathroom_3", "bathroom_2"],
                  ["bathroom_2", "bathroom_1"],
@@ -83,6 +90,7 @@
                  ["desk_2", "desk_2_seated"],
                  ["tv_chair_1", "tv_chair_1_seated"],
                  ["tv_chair_2", "tv_chair_2_seated"],
+                 ["gym_bike", "gym_bike_seated"],
              ],
          };
 
@@ -111,12 +119,13 @@
               * "kitchen_chair_2": continue_sitting_at("kitchen_chair_2"),
               * "kitchen_chair_3": continue_sitting_at("kitchen_chair_3"),
               * "kitchen_chair_4": continue_sitting_at("kitchen_chair_4"),*/
-             "kitchen_cooking": continue_waving_at("kitchen_cooking"),
+             // "kitchen_cooking": continue_waving_at("kitchen_cooking"),
              "desk_1": continue_sitting_at("desk_1"),
              "desk_2": continue_sitting_at("desk_2"),
              "tv_chair_1": continue_sitting_at("tv_chair_1"),
              "tv_chair_2": continue_sitting_at("tv_chair_2"),
-             "gym": continue_waving_at("gym"),
+             "gym_bar": continue_waving_at("gym_bar"),
+             "gym_bike": continue_sitting_at("gym_bike"),
          };
 
          function get_held_resources(world) {
@@ -845,7 +854,7 @@
                  {
                      steve: new SequentialAni([
                          new WalkToAni(steve, "kitchen_chair_1", "behind_table"),
-                         new WalkToAni(steve, "gym"),
+                         new WalkToAni(steve, "gym_bar"),
                      ]),
                      david: new SequentialAni([
                          new WalkToAni(david, "kitchen_chair_2", "behind_table"),
