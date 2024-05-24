@@ -9,6 +9,7 @@
              sandro: "imgs/people/sandro/Sandro Head.png",
              house: "imgs/house.png",
              table: "imgs/table.png",
+             savor: "imgs/savor.png",
          };
 
          const global_motion_graph = {
@@ -375,15 +376,30 @@
 
              ctx.drawImage(params.head_image, 30 + left, bounce_amount);
 
-             params.speech = "Dinner's Ready!";
+             if (params.arm.period_ms < 2000) {
+                 params.speech = "Dinner's Ready!";
+             } else {
+                 params.speech = global_world.images.savor;
+             }
              if (params.speech !== null && params.speech !== undefined) {
                  ctx.fillStyle = "white";
                  ctx.strokeStyle = "black";
                  ctx.font = "75px Inter";
-                 const measure = ctx.measureText(params.speech);
-                 const speech_width = measure.width + 100;
-                 const speech_height = measure.actualBoundingBoxAscent + measure.actualBoundingBoxDescent + 100;
                  const x_base = 50 + left + 170/2;
+                 var speech_width = 0;
+                 var speech_height = 0;
+                 var text_x = 0;
+                 var text_y = 0;
+                 if (typeof params.speech === 'string') {
+                     const measure = ctx.measureText(params.speech);
+                     speech_width = measure.width + 100;
+                     speech_height = measure.actualBoundingBoxAscent + measure.actualBoundingBoxDescent + 100;
+                     text_x = x_base - measure.width / 2;
+                     text_y = -30 - 50 - measure.actualBoundingBoxDescent;
+                 } else {
+                     speech_width = params.speech.width + 50;
+                     speech_height = params.speech.height + 50;
+                 }
                  ctx.beginPath();
                  ctx.moveTo(x_base, bounce_amount);
                  ctx.lineTo(x_base + 30, -30);
@@ -395,8 +411,12 @@
                  ctx.lineTo(x_base, bounce_amount);
                  ctx.fill();
                  ctx.stroke();
-                 ctx.fillStyle = "black";
-                 ctx.fillText(params.speech, x_base - measure.width / 2, -30 - 50 - measure.actualBoundingBoxDescent);
+                 if (typeof params.speech === 'string') {
+                     ctx.fillStyle = "black";
+                     ctx.fillText(params.speech, text_x, text_y);
+                 } else {
+                     ctx.drawImage(params.speech, x_base - speech_width/2 + 50/2, -speech_height - 30 + 50/2);
+                 }
              }
              
              ctx.resetTransform();
@@ -842,6 +862,8 @@
                  }
              ]);
          }
+
+         var global_world = null;
          
          function main() {
              load_images().then((images) => {
@@ -880,6 +902,7 @@
                      event: null,
                      last_event_finish_time: new Date().getTime(),
                  };
+                 global_world = world;
                  // world.event = sample_event(world);
                  for (const [name, person] of Object.entries(world.people)) {
                      set_starting_state(world, person);
