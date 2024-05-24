@@ -18,7 +18,7 @@
              bar: "imgs/bar.png",
              biceps: "imgs/biceps.png",
              wave: "imgs/wave.png",
-             cum: "imgs/cum.png",
+             squirt: "imgs/squirt.png",
          };
 
          const global_motion_graph = {
@@ -572,7 +572,7 @@
              const y = params.y - 30 * position_t;
 
              if (position_t === 1.0 && params.hookup_t >= 0.7) {
-                 params.speech = params.cum;
+                 params.speech = params.squirt;
              }
 
              const top = 320;
@@ -620,7 +620,7 @@
              const x = params.x - thrust_offset;
 
              if (position_t === 1.0 && params.hookup_t >= 0.7) {
-                 params.speech = params.cum;
+                 params.speech = params.squirt;
              }
 
              const top = 320;
@@ -881,7 +881,7 @@
                      x: this.x,
                      y: this.y,
                      hookup_t: hookup_t,
-                     cum: this.world.images.cum,
+                     squirt: this.world.images.squirt,
                  };
                  Object.assign(params, this.person_params);
                  this.draw_fn(params);
