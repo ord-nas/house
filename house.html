@@ -18,6 +18,7 @@
              bar: "imgs/bar.png",
              biceps: "imgs/biceps.png",
              wave: "imgs/wave.png",
+             cum: "imgs/cum.png",
          };
 
          const global_motion_graph = {
@@ -293,7 +294,7 @@
              };
          }
 
-         function make_person(head_image, arm_color, body_color, bounce_period, arm_period, accessory = false) {
+         function make_person(head_image, arm_color, body_color, bounce_period, arm_period, top_proclivity, accessory = false) {
              return {
                  params: {
                      head_image: head_image,
@@ -309,6 +310,7 @@
                          period_ms: arm_period,
                      },
                      walking_speed_pps: 150,
+                     top_proclivity: top_proclivity,
                      accessory: accessory,
                  },
                  animation: null,
@@ -551,6 +553,105 @@
              ctx.resetTransform();
          }
 
+         function draw_topping(params) {
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.resetTransform();
+
+             const position_t = params.sex_t < 0.05 ? params.sex_t / 0.05
+                                                    : params.sex_t > 0.95 ? (1.0 - params.sex_t) / 0.05
+                                                                          : 1.0;
+
+             const thrust_t = position_t == 1.0 ? (params.sex_t % 0.025) / 0.025 : 0.0;
+             const thrust_max_offset = 20;
+             const thrust_offset =
+                 (thrust_t < 0.25 ? thrust_t / 0.25 * thrust_max_offset
+                                  : thrust_t < 0.5 ? thrust_max_offset
+                                                   : (1.0 - thrust_t) / 0.5 * thrust_max_offset);
+             const x = params.x - thrust_offset;
+             const y = params.y - 30 * position_t;
+
+             if (position_t === 1.0 && params.sex_t >= 0.7) {
+                 params.speech = params.cum;
+             }
+
+             const top = 320;
+             const bottom = 320 + 200;
+             const left = 70;
+
+             ctx.scale(params.scale, params.scale);
+             ctx.translate(-(50 + left + 170/2), -bottom);
+             ctx.translate(x / params.scale, y / params.scale);
+
+             ctx.fillStyle = params.body_color;
+             ctx.fillRect(50 + left, top, 170, (bottom - top));
+
+             ctx.beginPath();
+             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+             ctx.fill();
+
+             const arm_offset_x = 10;
+             const arm_offset_y = -30;
+             draw_arm(ctx, params.arm_color, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
+             draw_arm(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
+
+             ctx.drawImage(params.head_image, 30 + left, 0);
+
+             draw_speech(ctx, params, 0);
+             
+             ctx.resetTransform();
+         }
+
+         function draw_bottoming(params) {
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.resetTransform();
+
+             const position_t = params.sex_t < 0.05 ? params.sex_t / 0.05
+                                                    : params.sex_t > 0.95 ? (1.0 - params.sex_t) / 0.05
+                                                                          : 1.0;
+
+             const thrust_t = position_t == 1.0 ? (params.sex_t % 0.025) / 0.025 : 0.0;
+             const thrust_max_offset = 20;
+             const thrust_offset =
+                 (thrust_t < 0.25 ? thrust_t / 0.25 * thrust_max_offset
+                                  : thrust_t < 0.5 ? thrust_max_offset
+                                                   : (1.0 - thrust_t) / 0.5 * thrust_max_offset);
+             const x = params.x - thrust_offset;
+
+             if (position_t === 1.0 && params.sex_t >= 0.7) {
+                 params.speech = params.cum;
+             }
+
+             const top = 320;
+             const bottom = 320 + 200;
+             const left = 70;
+
+             ctx.scale(params.scale, params.scale);
+             ctx.translate(-(50 + left + 170/2), -bottom);
+             ctx.translate(x / params.scale, params.y / params.scale);
+             ctx.translate(position_t * -150, position_t * 500);
+             ctx.rotate(position_t * -Math.PI / 2.0);
+
+             ctx.fillStyle = params.body_color;
+             ctx.fillRect(50 + left, top, 170, (bottom - top));
+
+             ctx.beginPath();
+             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+             ctx.fill();
+
+             const arm_offset_x = 10;
+             const arm_offset_y = -30;
+             draw_arm(ctx, params.arm_color, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
+             draw_arm(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
+
+             ctx.drawImage(params.head_image, 30 + left, 0);
+
+             draw_speech(ctx, params, 0);
+             
+             ctx.resetTransform();
+         }
+
          // The API for an animation is:
          //  * it has a tick() method that draws and returns whether the animation is done.
          //  * it has a request_done() method.
@@ -758,6 +859,40 @@
              can_request_done() { return false; }
          }
 
+         class SexAni {
+             constructor(world, person_params, node, draw_fn) {
+                 this.world = world;
+                 this.person_params = person_params;
+                 [this.x, this.y] = global_motion_graph.nodes[node];
+                 this.draw_fn = draw_fn;
+                 this.start_time = null;
+             }
+
+             tick(current_time, layer) {
+                 if (layer !== "behind_table") {
+                     return false;
+                 }
+                 if (this.start_time === null) {
+                     this.start_time = current_time;
+                 }
+                 const time = current_time - this.start_time;
+                 const sex_t = time / 16000;
+                 var params = {
+                     x: this.x,
+                     y: this.y,
+                     sex_t: sex_t,
+                     cum: this.world.images.cum,
+                 };
+                 Object.assign(params, this.person_params);
+                 this.draw_fn(params);
+                 return sex_t >= 1.0;
+             }
+
+             request_done() {}
+
+             can_request_done() { return false; }
+         }
+
          class SequentialAni {
              constructor(sequence) {
                  this.sequence = sequence;
@@ -925,7 +1060,7 @@
                      }
                  } else {
                      // Maybe set up a new event.
-                     if (current_time - this.last_event_finish_time > 15000) {
+                     if (current_time - this.last_event_finish_time > 1000) {
                          this.event = this.create_event();
                          console.log("installed event!");
                      }
@@ -1061,10 +1196,6 @@
                  .sort((a, b) => a[1] - b[1])
                  .map(([p, order]) => p)
                  .map((name) => [name, world.people[name]]);
-             const steve = world.people.steve;
-             const david = world.people.david;
-             const carlos = world.people.carlos;
-             const sandro = world.people.sandro;
              
              const stage_1 = {
                  [cook_name]: new SequentialAni([
@@ -1129,6 +1260,12 @@
              const grindr = world.people.grindr;
              grindr.location = "offscreen_1";
 
+             const host_will_top = Math.random() <= host.params.top_proclivity;
+             const top_name = host_will_top ? host_name : "grindr";
+             const bottom_name = host_will_top ? "grindr" : host_name;
+             const top = world.people[top_name];
+             const bottom = world.people[bottom_name];
+
              const stages = [{
                  [host_name]: null,
                  grindr: new SequentialAni([
@@ -1142,13 +1279,26 @@
                  [host_name]: new ContinueMotionAni(host.params, "doorway_inside", {duration: 2000, speech: world.images.wave}),
                  grindr: new ContinueMotionAni(grindr.params, "doorway_outside", {duration: 2000, speech: world.images.wave}),
              }, {
-                 [host_name]: new WalkToAni(host, "bed_1"),
-                 grindr: new WalkToAni(grindr, "bed_2"),
+                 [bottom_name]: new SequentialAni([
+                     new WalkToAni(bottom, "bed_1"),
+                     new StopMotionAni(bottom.params, "bed_1"),
+                 ]),
+                 [top_name]: new SequentialAni([
+                     new WalkToAni(top, "bed_2"),
+                     new StopMotionAni(top.params, "bed_2"),
+                 ]),
              }, {
-                 [host_name]: new ContinueMotionAni(host.params, "bed_1", {duration: 8000}),
-                 grindr: new ContinueMotionAni(grindr.params, "bed_2", {duration: 8000}),
+                 [bottom_name]: new SequentialAni([
+                     new SexAni(world, bottom.params, "bed_1", draw_bottoming),
+                     new StartMotionAni(bottom.params, "bed_1"),
+                 ]),
+                 [top_name]: new SequentialAni([
+                     new SexAni(world, top.params, "bed_2", draw_topping),
+                     new StartMotionAni(top.params, "bed_2"),
+                 ]),
              }, {
-                 [host_name]: new ContinueMotionAni(host.params, "bed_1", {duration: 0, speech: world.images.wave}),
+                 [host_name]: new ContinueMotionAni(host.params, host_will_top ? "bed_2" : "bed_1", {
+                     duration: 0, speech: world.images.wave}),
                  grindr: new WalkToAni(grindr, "offscreen_1"),
              }];
 
@@ -1167,28 +1317,32 @@
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
                              /*bounce_period=*/900,
-                             /*arm_period=*/2200
+                             /*arm_period=*/2200,
+                             /*top_proclivity=*/0.8,
                          ),
                          david: make_person(
                              images.david,
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
                              /*bounce_period=*/1100,
-                             /*arm_period=*/2000
+                             /*arm_period=*/2000,
+                             /*top_proclivity=*/0.2,
                          ),
                          carlos: make_person(
                              images.carlos,
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
                              /*bounce_period=*/800,
-                             /*arm_period=*/1800
+                             /*arm_period=*/1800,
+                             /*top_proclivity=*/0.2,
                          ),
                          sandro: make_person(
                              images.sandro,
                              /*arm_color=*/"blue",
                              /*body_color=*/"green",
                              /*bounce_period=*/1000,
-                             /*arm_period=*/1300
+                             /*arm_period=*/1300,
+                             /*top_proclivity=*/0.2,
                          ),
                          grindr: make_person(
                              images.grindr,
@@ -1196,6 +1350,7 @@
                              /*body_color=*/"green",
                              /*bounce_period=*/1200,
                              /*arm_period=*/1500,
+                             /*top_proclivity=*/0.0,
                              /*accessory=*/true,
                          ),
                      },
