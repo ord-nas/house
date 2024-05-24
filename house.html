@@ -14,6 +14,8 @@
              biking: "imgs/biking.png",
              cook: "imgs/cook.png",
              exclamation: "imgs/exclamation.png",
+             bar: "imgs/bar.png",
+             biceps: "imgs/biceps.png",
          };
 
          const global_motion_graph = {
@@ -135,6 +137,21 @@
              };
          }
 
+         function lift_weights() {
+             return (world, person) => {
+                 return new SequentialAni([
+                     new StopWavingAni(person.params, "gym_bar"),
+                     new StartWavingAni(person.params, "gym_bar", {
+                         layer: "behind_table", draw_fn: draw_weight_lifting}),
+                     new ContinueWavingAni(person.params, "gym_bar", {
+                         layer: "behind_table", draw_fn: draw_weight_lifting, speech: world.images.biceps}),
+                     new StopWavingAni(person.params, "gym_bar", {
+                         layer: "behind_table", draw_fn: draw_weight_lifting, speech: world.images.biceps}),
+                     new StartWavingAni(person.params, "gym_bar"),
+                 ]);
+             };
+         }
+
          const global_simple_targets = {
              "living_chair_1": continue_sitting_at("living_chair_1"),
              "living_chair_2": continue_sitting_at("living_chair_2"),
@@ -148,7 +165,7 @@
              "desk_2": continue_sitting_at("desk_2", {image: "work"}),
              "tv_chair_1": watch_tv_at("tv_chair_1"),
              "tv_chair_2": watch_tv_at("tv_chair_2"),
-             "gym_bar": continue_waving_at("gym_bar"),
+             "gym_bar": lift_weights(),
              "gym_bike": continue_sitting_at("gym_bike", {image: "biking"}),
          };
 
@@ -327,6 +344,29 @@
              ctx.restore();
          }
 
+         function draw_arm_lifting(ctx, color, shoulder_x, shoulder_y, radius, offset) {
+             ctx.save();
+             ctx.fillStyle = color;
+
+             ctx.translate(shoulder_x, shoulder_y);
+
+             ctx.beginPath();
+             ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+             ctx.fill();
+
+             ctx.beginPath();
+             ctx.arc(0, offset, radius, 0, 2 * Math.PI);
+             ctx.fill();
+
+             if (offset > 0) {
+                 ctx.fillRect(-radius, 0, 2 * radius, offset);
+             } else {
+                 ctx.fillRect(-radius, offset, 2 * radius, -offset);
+             }
+
+             ctx.restore();
+         }
+
          function eased(time_ms, period_ms) {
              const offset_ms = time_ms % period_ms;
              return 0.5 - Math.cos(offset_ms / period_ms * 2 * Math.PI) / 2.0;
@@ -380,45 +420,12 @@
              };
          }
 
-         function draw_from_params(params) {
-             var canvas = document.getElementById("c");
-             var ctx = canvas.getContext("2d");
-             ctx.resetTransform();
-
-             const bounce_amount = params.bounce_t * 20;
-
-             const top = 320 + bounce_amount;
-             const bottom = 320 + 200;
-             const left = 70;
-
-             ctx.scale(params.scale, params.scale);
-             ctx.translate(-(50 + left + 170/2), -bottom);
-             ctx.translate(params.x / params.scale, params.y / params.scale);
-
-             ctx.fillStyle = params.body_color;
-             ctx.fillRect(50 + left, top, 170, (bottom - top));
-
-             ctx.beginPath();
-             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
-             ctx.fill();
-
-             const arm_offset_x = 10;
-             const arm_offset_y = -30;
-             draw_arm(ctx, params.arm_color, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
-             draw_arm(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
-
-             ctx.drawImage(params.head_image, 30 + left, bounce_amount);
-
-             /* if (params.arm.period_ms < 2000) {
-              *     params.speech = "Dinner's Ready!";
-              * } else {
-              *     params.speech = global_world.images.savor;
-              * }*/
+         function draw_speech(ctx, params, bounce_amount) {
              if (params.speech !== null && params.speech !== undefined) {
                  ctx.fillStyle = "white";
                  ctx.strokeStyle = "black";
                  ctx.font = "75px Inter";
-                 const x_base = 50 + left + 170/2;
+                 const x_base = 50 + 70 + 170/2;
                  var speech_width = 0;
                  var speech_height = 0;
                  var text_x = 0;
@@ -451,6 +458,80 @@
                      ctx.drawImage(params.speech, x_base - speech_width/2 + 50/2, -speech_height - 30 + 50/2);
                  }
              }
+         }
+
+         function draw_nominal(params) {
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.resetTransform();
+
+             const bounce_amount = params.bounce_t * 20;
+
+             const top = 320 + bounce_amount;
+             const bottom = 320 + 200;
+             const left = 70;
+
+             ctx.scale(params.scale, params.scale);
+             ctx.translate(-(50 + left + 170/2), -bottom);
+             ctx.translate(params.x / params.scale, params.y / params.scale);
+
+             ctx.fillStyle = params.body_color;
+             ctx.fillRect(50 + left, top, 170, (bottom - top));
+
+             ctx.beginPath();
+             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+             ctx.fill();
+
+             const arm_offset_x = 10;
+             const arm_offset_y = -30;
+             draw_arm(ctx, params.arm_color, 50 + left + arm_offset_x, top + arm_offset_y, 20, 100, 2.5 * params.arm_t);
+             draw_arm(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
+
+             ctx.drawImage(params.head_image, 30 + left, bounce_amount);
+
+             draw_speech(ctx, params, bounce_amount);
+             
+             ctx.resetTransform();
+         }
+
+         function draw_weight_lifting(params) {
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.resetTransform();
+
+             ctx.fillStyle = "#fde3a8";
+             ctx.fillRect(690, 420, 173, 47);
+
+             const top = 320;
+             const bottom = 320 + 200;
+             const left = 70;
+
+             ctx.scale(params.scale, params.scale);
+             ctx.translate(-(50 + left + 170/2), -bottom);
+             ctx.translate(params.x / params.scale, params.y / params.scale);
+
+             ctx.fillStyle = params.body_color;
+             ctx.fillRect(50 + left, top, 170, (bottom - top));
+
+             ctx.beginPath();
+             ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
+             ctx.fill();
+             
+             ctx.drawImage(params.head_image, 30 + left, 0);
+
+             const arm_offset_x = 10;
+             const arm_offset_y = -30;
+             const arm_offset = 75 - 200 * params.arm_t;
+             draw_arm_lifting(ctx, params.arm_color, 50 + left + arm_offset_x, top + arm_offset_y, 20, arm_offset);
+             draw_arm_lifting(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, arm_offset);
+
+             draw_speech(ctx, params, 0);
+             
+             ctx.resetTransform();
+             ctx.scale(0.25, 0.25);
+             ctx.translate(0, -500);
+             ctx.translate(0, arm_offset - 80);
+             ctx.drawImage(global_world.images.bar, 0, 0);
              
              ctx.resetTransform();
          }
@@ -461,11 +542,12 @@
          //  * it has a can_request_done() method that returns true or false.
 
          class StartWavingAni {
-             constructor(person_params, [x, y], layer = "") {
+             constructor(person_params, node, {layer = "", draw_fn = draw_nominal, speech = null} = {}) {
                  this.person_params = person_params;
-                 this.x = x;
-                 this.y = y;
+                 [this.x, this.y] = global_motion_graph.nodes[node];
                  this.layer = layer;
+                 this.draw_fn = draw_fn;
+                 this.speech = speech;
                  this.start_time = null;
              }
 
@@ -479,10 +561,11 @@
                  var params = {
                      x: this.x,
                      y: this.y,
+                     speech: this.speech,
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_from_rest(this.person_params, current_time, this.start_time));
-                 draw_from_params(params);
+                 this.draw_fn(params);
                  return params.done;
              }
 
@@ -492,11 +575,12 @@
          }
 
          class StopWavingAni {
-             constructor(person_params, [x, y], layer = "") {
+             constructor(person_params, node, {layer = "", draw_fn = draw_nominal, speech = null} = {}) {
                  this.person_params = person_params;
-                 this.x = x;
-                 this.y = y;
+                 [this.x, this.y] = global_motion_graph.nodes[node];
                  this.layer = layer;
+                 this.draw_fn = draw_fn;
+                 this.speech = speech;
                  this.start_time = null;
              }
 
@@ -510,10 +594,11 @@
                  var params = {
                      x: this.x,
                      y: this.y,
+                     speech: this.speech,
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_to_rest(this.person_params, current_time, this.start_time));
-                 draw_from_params(params);
+                 this.draw_fn(params);
                  return params.done;
              }
 
@@ -523,12 +608,13 @@
          }
 
          class ContinueWavingAni {
-             constructor(person_params, node, {layer = "", duration = null, speech = null} = {}) {
+             constructor(person_params, node, {layer = "", duration = null, speech = null, draw_fn = draw_nominal} = {}) {
                  this.person_params = person_params;
                  [this.x, this.y] = global_motion_graph.nodes[node];
                  this.layer = layer;
                  this.duration = duration;
                  this.speech = speech;
+                 this.draw_fn = draw_fn;
                  this.start_time = null;
                  this.done = false;
              }
@@ -550,7 +636,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
-                 draw_from_params(params);
+                 this.draw_fn(params);
                  return this.done;
              }
 
@@ -624,7 +710,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
-                 draw_from_params(params);
+                 draw_nominal(params);
                  return path_point.finished;
              }
 
