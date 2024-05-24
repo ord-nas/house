@@ -87,7 +87,7 @@
 
          function continue_waving_at(node) {
              return (person) => {
-                 return new ContinueWavingAni(person.params, global_motion_graph.nodes[node]);
+                 return new ContinueWavingAni(person.params, node);
              };
          }
 
@@ -96,7 +96,7 @@
              return (person) => {
                  return new SequentialAni([
                      new WalkAni(person.params, node, seated_node, "behind_table"),
-                     new ContinueWavingAni(person.params, global_motion_graph.nodes[seated_node], "behind_table"),
+                     new ContinueWavingAni(person.params, seated_node, "behind_table"),
                      new WalkAni(person.params, seated_node, node, "behind_table"),
                  ]);
              };
@@ -157,7 +157,7 @@
                  return;
              }
              const [location, make_ani_fn] = kv;
-             person.animation = new ContinueWavingAni(person.params, global_motion_graph.nodes[location]);
+             person.animation = new ContinueWavingAni(person.params, location);
              person.location = location;
          }
          
@@ -444,13 +444,13 @@
          }
 
          class ContinueWavingAni {
-             constructor(person_params, [x, y], layer = "") {
+             constructor(person_params, node, layer = "", duration = null) {
                  this.person_params = person_params;
-                 this.x = x;
-                 this.y = y;
+                 [this.x, this.y] = global_motion_graph.nodes[node];
                  this.layer = layer;
                  this.start_time = null;
                  this.done = false;
+                 this.duration = duration;
              }
 
              tick(current_time, layer) {
@@ -459,6 +459,9 @@
                  }
                  if (this.start_time === null) {
                      this.start_time = current_time;
+                 }
+                 if (this.duration !== null && current_time - this.start_time >= this.duration) {
+                     this.done = true;
                  }
                  var params = {
                      x: this.x,
@@ -474,7 +477,7 @@
                  this.done = true;
              }
 
-             can_request_done() { return true; }
+             can_request_done() { return this.duration === null; }
          }
 
          class WalkAni {
@@ -539,7 +542,30 @@
              }
          }
 
-         function animate_people(world, current_time, layer) {
+         class SimultaneousAni {
+             constructor(children) {
+                 this.children = children;
+             }
+
+             tick(current_time, layer) {
+                 var done = true;
+                 for (const child of this.children) {
+                     done &= child.tick(current_time, layer);
+                 }
+                 return done;
+             }
+
+             request_done() {
+                 this.children.map((a) => { a.request_done(); });
+             }
+
+             can_request_done() {
+                 this.children.every((a) => { return a.can_request_done(); });
+             }
+         }
+
+         function animate(world, current_time, layer) {
+             // Animate the people.
              for (var [name, person] of Object.entries(world.people)) {
                  if (person.animation === null) {
                      // Nothing to animate.
@@ -581,6 +607,10 @@
                  }
              }
 
+             // Animate the currently-active event.
+             if (world.event !== null) {
+                 world.event.ani.tick(current_time, layer);
+             }
          }
          
          function set_up_animation_loop(world) {
@@ -599,7 +629,7 @@
                  ctx.drawImage(world.images.house, 0, 0);
 
                  // Animate behind_table layer.
-                 animate_people(world, current_time, "behind_table");
+                 animate(world, current_time, "behind_table");
                  
                  // Draw table.
                  ctx.resetTransform();
@@ -609,7 +639,7 @@
                  ctx.resetTransform();
 
                  // Animate default layer.
-                 animate_people(world, current_time, /*layer=*/"");
+                 animate(world, current_time, /*layer=*/"");
 
                  window.requestAnimationFrame(tick);
              }
@@ -650,11 +680,36 @@
                              /*arm_period=*/1300
                          ),
                      },
+                     event: null,
                  };
-                 set_starting_state(world, world.people.steve);
-                 set_starting_state(world, world.people.david);
-                 set_starting_state(world, world.people.carlos);
-                 set_starting_state(world, world.people.sandro);
+                 world.event = {
+                     ani: new SimultaneousAni([
+                         new SequentialAni([
+                             new WalkAni(world.people.steve.params, "gym", "kitchen_chair_1"),
+                             new WalkAni(world.people.steve.params, "kitchen_chair_1", "kitchen_chair_1_seated", "behind_table"),
+                             new ContinueWavingAni(world.people.steve.params, "kitchen_chair_1_seated", "behind_table"),
+                         ]),
+                         new SequentialAni([
+                             new WalkAni(world.people.david.params, "living_chair_1", "kitchen_chair_2"),
+                             new WalkAni(world.people.david.params, "kitchen_chair_2", "kitchen_chair_2_seated", "behind_table"),
+                             new ContinueWavingAni(world.people.david.params, "kitchen_chair_2_seated", "behind_table"),
+                         ]),
+                         new SequentialAni([
+                             new WalkAni(world.people.carlos.params, "desk_1", "kitchen_chair_3"),
+                             new WalkAni(world.people.carlos.params, "kitchen_chair_3", "kitchen_chair_3_seated", "behind_table"),
+                             new ContinueWavingAni(world.people.carlos.params, "kitchen_chair_3_seated", "behind_table"),
+                         ]),
+                         new SequentialAni([
+                             new WalkAni(world.people.sandro.params, "bed_2", "kitchen_chair_4"),
+                             new WalkAni(world.people.sandro.params, "kitchen_chair_4", "kitchen_chair_4_seated", "behind_table"),
+                             new ContinueWavingAni(world.people.sandro.params, "kitchen_chair_4_seated", "behind_table"),
+                         ]),
+                     ]),
+                 };
+                 /* set_starting_state(world, world.people.steve);
+                  * set_starting_state(world, world.people.david);
+                  * set_starting_state(world, world.people.carlos);
+                  * set_starting_state(world, world.people.sandro);*/
                  /* world.people.steve.animation = new SequentialAni([
                   *     new StartWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
                   *     //new ContinueWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
