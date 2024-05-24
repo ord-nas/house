@@ -380,7 +380,6 @@
          //  * it has a tick() method that draws and returns whether the animation is done.
          //  * it has a request_done() method.
          //  * it has a can_request_done() method that returns true or false.
-         //  * it has a get_layer() method that returns which layer the animation should be drawn in.
 
          class StartWavingAni {
              constructor(person_params, [x, y], layer = "") {
@@ -391,8 +390,10 @@
                  this.start_time = null;
              }
 
-             tick(current_time) {
-                 console.log("start_waving_tick");
+             tick(current_time, layer) {
+                 if (this.layer !== layer) {
+                     return false;
+                 }
                  if (this.start_time === null) {
                      this.start_time = current_time;
                  }
@@ -409,8 +410,6 @@
              request_done() {}
              
              can_request_done() { return false; }
-
-             get_layer() { return this.layer; }
          }
 
          class StopWavingAni {
@@ -422,7 +421,10 @@
                  this.start_time = null;
              }
 
-             tick(current_time) {
+             tick(current_time, layer) {
+                 if (this.layer !== layer) {
+                     return false;
+                 }
                  if (this.start_time === null) {
                      this.start_time = current_time;
                  }
@@ -439,8 +441,6 @@
              request_done() {}
              
              can_request_done() { return false; }
-
-             get_layer() { return this.layer; }
          }
 
          class ContinueWavingAni {
@@ -453,7 +453,10 @@
                  this.done = false;
              }
 
-             tick(current_time) {
+             tick(current_time, layer) {
+                 if (this.layer !== layer) {
+                     return false;
+                 }
                  if (this.start_time === null) {
                      this.start_time = current_time;
                  }
@@ -472,8 +475,6 @@
              }
 
              can_request_done() { return true; }
-
-             get_layer() { return this.layer; }
          }
 
          class WalkAni {
@@ -487,7 +488,10 @@
                  this.done = false;
              }
 
-             tick(current_time) {
+             tick(current_time, layer) {
+                 if (this.layer !== layer) {
+                     return false;
+                 }
                  if (this.start_time === null) {
                      this.start_time = current_time;
                  }
@@ -506,8 +510,6 @@
              request_done() {}
 
              can_request_done() { return false; }
-
-             get_layer() { return this.layer; }
          }
 
          class SequentialAni {
@@ -516,11 +518,11 @@
                  this.current = 0;
              }
 
-             tick(current_time) {
+             tick(current_time, layer) {
                  if (this.current >= this.sequence.length) {
                      return true;
                  }
-                 const next = this.sequence[this.current].tick(current_time);
+                 const next = this.sequence[this.current].tick(current_time, layer);
                  if (next) {
                      this.current += 1;
                  }
@@ -535,11 +537,6 @@
                  const index = Math.min(this.current, this.sequence.length - 1);
                  return this.sequence[index].can_request_done();
              }
-
-             get_layer() {
-                 const index = Math.min(this.current, this.sequence.length - 1);
-                 return this.sequence[index].get_layer();
-             }
          }
 
          function animate_people(world, current_time, layer) {
@@ -549,12 +546,7 @@
                      continue;
                  }
 
-                 if (person.animation.get_layer() !== layer) {
-                     // Wrong layer.
-                     continue;
-                 }
-
-                 const done = person.animation.tick(current_time);
+                 const done = person.animation.tick(current_time, layer);
                  
                  if (person.next_action_time === null) {
                      // Case 1: not yet in the steady-state for this animation.
