@@ -375,21 +375,29 @@
 
              ctx.drawImage(params.head_image, 30 + left, bounce_amount);
 
-             const speech_width = 200;
-             const speech_height = 200;
-             ctx.fillStyle = "white";
-             ctx.strokeStyle = "black";
-             ctx.beginPath();
-             ctx.moveTo(50 + left + 170/2, bounce_amount);
-             ctx.lineTo(50 + left + 170/2 + 30, -30);
-             ctx.lineTo(50 + left + 170/2 + speech_width/2, -30);
-             ctx.lineTo(50 + left + 170/2 + speech_width/2, -speech_height - 30);
-             ctx.lineTo(50 + left + 170/2 - speech_width/2, -speech_height - 30);
-             ctx.lineTo(50 + left + 170/2 - speech_width/2, -30);
-             ctx.lineTo(50 + left + 170/2 - 30, -30);
-             ctx.lineTo(50 + left + 170/2, bounce_amount);
-             ctx.fill();
-             ctx.stroke();
+             params.speech = "Dinner's Ready!";
+             if (params.speech !== null && params.speech !== undefined) {
+                 ctx.fillStyle = "white";
+                 ctx.strokeStyle = "black";
+                 ctx.font = "75px Inter";
+                 const measure = ctx.measureText(params.speech);
+                 const speech_width = measure.width + 100;
+                 const speech_height = measure.actualBoundingBoxAscent + measure.actualBoundingBoxDescent + 100;
+                 const x_base = 50 + left + 170/2;
+                 ctx.beginPath();
+                 ctx.moveTo(x_base, bounce_amount);
+                 ctx.lineTo(x_base + 30, -30);
+                 ctx.lineTo(x_base + speech_width/2, -30);
+                 ctx.lineTo(x_base + speech_width/2, -speech_height - 30);
+                 ctx.lineTo(x_base - speech_width/2, -speech_height - 30);
+                 ctx.lineTo(x_base - speech_width/2, -30);
+                 ctx.lineTo(x_base - 30, -30);
+                 ctx.lineTo(x_base, bounce_amount);
+                 ctx.fill();
+                 ctx.stroke();
+                 ctx.fillStyle = "black";
+                 ctx.fillText(params.speech, x_base - measure.width / 2, -30 - 50 - measure.actualBoundingBoxDescent);
+             }
              
              ctx.resetTransform();
          }
