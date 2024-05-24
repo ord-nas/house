@@ -12,6 +12,8 @@
              savor: "imgs/savor.png",
              work: "imgs/work.png",
              biking: "imgs/biking.png",
+             cook: "imgs/cook.png",
+             exclamation: "imgs/exclamation.png",
          };
 
          const global_motion_graph = {
@@ -112,9 +114,9 @@
                      speech = world.images[image];
                  }
                  return new SequentialAni([
-                     new WalkAni(person.params, node, seated_node, /*layer=*/"behind_table"),
+                     new WalkAni(person.params, node, seated_node, {layer: "behind_table"}),
                      new ContinueWavingAni(person.params, seated_node, {layer: "behind_table", speech: speech}),
-                     new WalkAni(person.params, seated_node, node, /*layer=*/"behind_table"),
+                     new WalkAni(person.params, seated_node, node, {layer: "behind_table"}),
                  ]);
              };
          }
@@ -546,11 +548,12 @@
          }
 
          class WalkAni {
-             constructor(person_params, start_node, end_node, layer = "") {
+             constructor(person_params, start_node, end_node, {layer = "", speech = null} = {}) {
                  this.person_params = person_params;
                  this.start_node = start_node;
                  this.end_node = end_node;
                  this.layer = layer;
+                 this.speech = speech;
                  this.path = get_path(start_node, end_node);
                  this.start_time = null;
              }
@@ -567,6 +570,7 @@
                  var params = {
                      x: path_point.p[0],
                      y: path_point.p[1],
+                     speech: this.speech,
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
@@ -580,16 +584,16 @@
          }
 
          class WalkToAni {
-             constructor(person, end_node, layer = "") {
+             constructor(person, end_node, options = {}) {
                  this.person = person;
                  this.end_node = end_node;
-                 this.layer = layer;
+                 this.options = options;
                  this.child_ani = null;
              }
 
              tick(current_time, layer) {
                  if (this.child_ani === null) {
-                     this.child_ani = new WalkAni(this.person.params, this.person.location, this.end_node, this.layer);
+                     this.child_ani = new WalkAni(this.person.params, this.person.location, this.end_node, this.options);
                  }
                  const done = this.child_ani.tick(current_time, layer);
                  if (done) {
@@ -650,13 +654,13 @@
              }
          }
 
-         // TODO add resources.
          class Event {
              constructor(world, stages) {
                  this.world = world;
                  this.stages = stages;
                  this.current = 0;
                  this.people = {};
+                 this.people_done = new Set();
              }
 
              tick(current_time, layer) {
@@ -686,13 +690,13 @@
                  const all_acquired = (num_acquired === num_people);
 
                  // Deal with all the people.
-                 var num_done = 0;
                  for (const [name, person] of Object.entries(this.people)) {
                      if (person.event !== this) {
                          continue;
                      }
                      
-                     const desired_ani = stage[name];
+                     var desired_ani = stage[name];
+                     if (desired_ani === undefined) desired_ani = null;
                      if (all_acquired && desired_ani !== null && person.animation !== desired_ani) {
                          person.animation.request_done();
                          const done = person.animation.tick(current_time, layer);
@@ -702,17 +706,27 @@
                              person.next_animation = null;
                              person.next_location = null;
                          }
-                     } else {
-                         const done = person.animation.tick(current_time, layer);
-                         if (all_acquired && done) {
-                             num_done += 1;
+                     } else if (all_acquired && desired_ani === null) {
+                         var done = person.animation.tick(current_time, layer);
+                         done |= person.animation.can_request_done();
+                         if (done) {
+                             this.people_done.add(name);
                          }
+                     } else if (all_acquired) {
+                         const done = person.animation.tick(current_time, layer);
+                         if (done) {
+                             this.people_done.add(name);
+                         }
+                     } else {
+                         person.animation.tick(current_time, layer);
                      }
                  }
 
                  // Check if we can move on to the next stage.
+                 const num_done = this.people_done.size;
                  if (num_done === num_people && this.current < this.stages.length) {
                      this.current += 1;
+                     this.people_done = new Set();
                  }
 
                  // Check if we are done overall.
@@ -720,9 +734,44 @@
                  if (done_overall) {
                      for (const [name, person] of Object.entries(this.people)) {
                          person.event = null;
+                         person.next_action_time = current_time;
                      }
                  }
                  return done_overall;
+             }
+         }
+
+         class EventManager {
+             constructor(world) {
+                 this.world = world;
+                 this.event = null;
+                 this.last_event_finish_time = new Date().getTime();
+                 this.index = 0;
+             }
+
+             tick(current_time, layer) {
+                 if (this.event !== null) {
+                     // Animate the currently-active event.
+                     const done = this.event.tick(current_time, layer);
+                     if (done) {
+                         this.event = null;
+                         this.last_event_finish_time = current_time;
+                     }
+                 } else {
+                     // Maybe set up a new event.
+                     if (current_time - this.last_event_finish_time > 15000) {
+                         this.event = this.create_event();
+                         console.log("installed event!");
+                     }
+                 }
+             }
+
+             create_event() {
+                 const possible_cooks = ["steve", "david", "sandro", "carlos"];
+                 const cook = possible_cooks[this.index % possible_cooks.length];
+                 const event = dinner_event(this.world, cook);
+                 this.index += 1;
+                 return event;
              }
          }
 
@@ -778,14 +827,8 @@
                  }
              }
 
-             // Animate the currently-active event.
-             if (world.event !== null) {
-                 const done = world.event.tick(current_time, layer);
-                 if (done) {
-                     world.event = null;
-                     world.last_event_finish_time = current_time;
-                 }
-             }
+             // Animate the currently-active event, if any.
+             world.event_manager.tick(current_time, layer);
          }
          
          function set_up_animation_loop(world) {
@@ -816,70 +859,82 @@
                  // Animate default layer.
                  animate(world, current_time, /*layer=*/"");
 
-                 // Maybe set up a new event.
-                 if (world.event === null && current_time - world.last_event_finish_time > 15000) {
-                     world.event = sample_event(world);
-                     console.log("installed event!");
-                 }
-
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
          }
 
-         function sample_event(world) {
+         function dinner_event(world, cook_name) {
+             const cook = world.people[cook_name];
+             var non_cooks = new Set(["steve", "david", "sandro", "carlos"]);
+             non_cooks.delete(cook_name);
+             non_cooks = [...non_cooks];
+             non_cooks = non_cooks
+                 .map((p) => [p, Math.random()])
+                 .sort((a, b) => a[1] - b[1])
+                 .map(([p, order]) => p)
+                 .map((name) => [name, world.people[name]]);
              const steve = world.people.steve;
              const david = world.people.david;
              const carlos = world.people.carlos;
              const sandro = world.people.sandro;
-             return new Event(world, [
-                 {
-                     steve: new SequentialAni([
-                         new WalkToAni(steve, "kitchen_chair_1"),
-                         new WalkToAni(steve, "kitchen_chair_1_seated", "behind_table"),
-                         new ContinueWavingAni(steve.params, "kitchen_chair_1_seated", {layer: "behind_table", duration: 0}),
-                     ]),
-                     david: new SequentialAni([
-                         new WalkToAni(david, "kitchen_chair_2"),
-                         new WalkToAni(david, "kitchen_chair_2_seated", "behind_table"),
-                         new ContinueWavingAni(david.params, "kitchen_chair_2_seated", {layer: "behind_table", duration: 0}),
-                     ]),
-                     carlos: new SequentialAni([
-                         new WalkToAni(carlos, "kitchen_chair_3"),
-                         new WalkToAni(carlos, "kitchen_chair_3_seated", "behind_table"),
-                         new ContinueWavingAni(carlos.params, "kitchen_chair_3_seated", {layer: "behind_table", duration: 0}),
-                     ]),
-                     sandro: new SequentialAni([
-                         new WalkToAni(sandro, "kitchen_chair_4"),
-                         new WalkToAni(sandro, "kitchen_chair_4_seated", "behind_table"),
-                         new ContinueWavingAni(sandro.params, "kitchen_chair_4_seated", {layer: "behind_table", duration: 0}),
-                     ]),
-                 },
-                 {
-                     steve: new ContinueWavingAni(steve.params, "kitchen_chair_1_seated", {layer: "behind_table", duration: 3000}),
-                     david: new ContinueWavingAni(david.params, "kitchen_chair_2_seated", {layer: "behind_table", duration: 3000}),
-                     carlos: new ContinueWavingAni(carlos.params, "kitchen_chair_3_seated", {layer: "behind_table", duration: 3000}),
-                     sandro: new ContinueWavingAni(sandro.params, "kitchen_chair_4_seated", {layer: "behind_table", duration: 3000}),
-                 },
-                 {
-                     steve: new SequentialAni([
-                         new WalkToAni(steve, "kitchen_chair_1", "behind_table"),
-                         new WalkToAni(steve, "gym_bar"),
-                     ]),
-                     david: new SequentialAni([
-                         new WalkToAni(david, "kitchen_chair_2", "behind_table"),
-                         new WalkToAni(david, "living_chair_1"),
-                     ]),
-                     carlos: new SequentialAni([
-                         new WalkToAni(carlos, "kitchen_chair_3", "behind_table"),
-                         new WalkToAni(carlos, "desk_1"),
-                     ]),
-                     sandro: new SequentialAni([
-                         new WalkToAni(sandro, "kitchen_chair_4", "behind_table"),
-                         new WalkToAni(sandro, "bed_2"),
-                     ]),
-                 }
-             ]);
+             
+             const stage_1 = {
+                 [cook_name]: new SequentialAni([
+                     new WalkToAni(cook, "kitchen_fridge"),
+                     new ContinueWavingAni(cook.params, "kitchen_fridge", {duration: 2000, speech: world.images.cook}),
+                     new WalkToAni(cook, "kitchen_stove", {speech: world.images.cook}),
+                     new ContinueWavingAni(cook.params, "kitchen_stove", {duration: 2000, speech: world.images.cook}),
+                     new WalkToAni(cook, "kitchen_sink", {speech: world.images.cook}),
+                     new ContinueWavingAni(cook.params, "kitchen_sink", {duration: 2000, speech: world.images.cook}),
+                     new WalkToAni(cook, "kitchen_fridge", {speech: world.images.cook}),
+                     new ContinueWavingAni(cook.params, "kitchen_fridge", {duration: 2000, speech: world.images.cook}),
+                     new WalkToAni(cook, "kitchen_stove", {speech: world.images.cook}),
+                     new ContinueWavingAni(cook.params, "kitchen_stove", {duration: 2000, speech: world.images.cook}),
+                 ]),
+             };
+
+             const stage_2 = {
+                 [cook_name]: new ContinueWavingAni(cook.params, "kitchen_stove", {duration: 0, speech: world.images.cook}),
+             };
+             for (const [name, person] of non_cooks) {
+                 stage_2[name] = null;
+             }
+
+             const stage_3 = {
+                 [cook_name]: new ContinueWavingAni(cook.params, "kitchen_stove", {duration: 0, speech: "Dinner's ready!"}),
+             };
+             for (var i = 0; i < non_cooks.length; i += 1) {
+                 const [name, person] = non_cooks[i];
+                 const chair_node = "kitchen_chair_" + (i + 1);
+                 const chair_node_seated = chair_node + "_seated";
+                 stage_3[name] = new SequentialAni([
+                     new WalkToAni(person, chair_node, {speech: world.images.exclamation}),
+                     new WalkToAni(person, chair_node_seated, {layer: "behind_table"}),
+                 ]);
+             }
+
+             const stage_4 = {
+                 [cook_name]: new SequentialAni([
+                     new WalkToAni(cook, "kitchen_chair_4"),
+                     new WalkToAni(cook, "kitchen_chair_4_seated", {layer: "behind_table"}),
+                 ]),
+             };
+
+             const stage_5 = {};
+             const people = non_cooks.concat([[cook_name, cook]]);
+             for (var i = 0; i < people.length; i += 1) {
+                 const [name, person] = people[i];
+                 const chair_node = "kitchen_chair_" + (i + 1);
+                 const chair_node_seated = chair_node + "_seated";
+                 stage_5[name] = new SequentialAni([
+                     new ContinueWavingAni(person.params, chair_node_seated, {duration: 8000, speech: world.images.savor, layer: "behind_table"}),
+                     new WalkToAni(person, chair_node, {layer: "behind_table"}),
+                     new ContinueWavingAni(person.params, chair_node, {duration: 0}),
+                 ]);
+             }
+
+             return new Event(world, [stage_1, stage_2, stage_3, stage_4, stage_5]);
          }
 
          var global_world = null;
@@ -918,9 +973,8 @@
                              /*arm_period=*/1300
                          ),
                      },
-                     event: null,
-                     last_event_finish_time: new Date().getTime(),
                  };
+                 world.event_manager = new EventManager(world);
                  global_world = world;
                  for (const [name, person] of Object.entries(world.people)) {
                      set_starting_state(world, person);
