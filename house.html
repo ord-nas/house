@@ -558,11 +558,11 @@
              var ctx = canvas.getContext("2d");
              ctx.resetTransform();
 
-             const position_t = params.sex_t < 0.05 ? params.sex_t / 0.05
-                                                    : params.sex_t > 0.95 ? (1.0 - params.sex_t) / 0.05
-                                                                          : 1.0;
+             const position_t = params.hookup_t < 0.05 ? params.hookup_t / 0.05
+                                                       : params.hookup_t > 0.95 ? (1.0 - params.hookup_t) / 0.05
+                                                                                : 1.0;
 
-             const thrust_t = position_t == 1.0 ? (params.sex_t % 0.025) / 0.025 : 0.0;
+             const thrust_t = position_t == 1.0 ? (params.hookup_t % 0.025) / 0.025 : 0.0;
              const thrust_max_offset = 20;
              const thrust_offset =
                  (thrust_t < 0.25 ? thrust_t / 0.25 * thrust_max_offset
@@ -571,7 +571,7 @@
              const x = params.x - thrust_offset;
              const y = params.y - 30 * position_t;
 
-             if (position_t === 1.0 && params.sex_t >= 0.7) {
+             if (position_t === 1.0 && params.hookup_t >= 0.7) {
                  params.speech = params.cum;
              }
 
@@ -607,11 +607,11 @@
              var ctx = canvas.getContext("2d");
              ctx.resetTransform();
 
-             const position_t = params.sex_t < 0.05 ? params.sex_t / 0.05
-                                                    : params.sex_t > 0.95 ? (1.0 - params.sex_t) / 0.05
-                                                                          : 1.0;
+             const position_t = params.hookup_t < 0.05 ? params.hookup_t / 0.05
+                                                       : params.hookup_t > 0.95 ? (1.0 - params.hookup_t) / 0.05
+                                                                                : 1.0;
 
-             const thrust_t = position_t == 1.0 ? (params.sex_t % 0.025) / 0.025 : 0.0;
+             const thrust_t = position_t == 1.0 ? (params.hookup_t % 0.025) / 0.025 : 0.0;
              const thrust_max_offset = 20;
              const thrust_offset =
                  (thrust_t < 0.25 ? thrust_t / 0.25 * thrust_max_offset
@@ -619,7 +619,7 @@
                                                    : (1.0 - thrust_t) / 0.5 * thrust_max_offset);
              const x = params.x - thrust_offset;
 
-             if (position_t === 1.0 && params.sex_t >= 0.7) {
+             if (position_t === 1.0 && params.hookup_t >= 0.7) {
                  params.speech = params.cum;
              }
 
@@ -859,7 +859,7 @@
              can_request_done() { return false; }
          }
 
-         class SexAni {
+         class HookupAni {
              constructor(world, person_params, node, draw_fn) {
                  this.world = world;
                  this.person_params = person_params;
@@ -876,16 +876,16 @@
                      this.start_time = current_time;
                  }
                  const time = current_time - this.start_time;
-                 const sex_t = time / 16000;
+                 const hookup_t = time / 16000;
                  var params = {
                      x: this.x,
                      y: this.y,
-                     sex_t: sex_t,
+                     hookup_t: hookup_t,
                      cum: this.world.images.cum,
                  };
                  Object.assign(params, this.person_params);
                  this.draw_fn(params);
-                 return sex_t >= 1.0;
+                 return hookup_t >= 1.0;
              }
 
              request_done() {}
@@ -1289,11 +1289,11 @@
                  ]),
              }, {
                  [bottom_name]: new SequentialAni([
-                     new SexAni(world, bottom.params, "bed_1", draw_bottoming),
+                     new HookupAni(world, bottom.params, "bed_1", draw_bottoming),
                      new StartMotionAni(bottom.params, "bed_1"),
                  ]),
                  [top_name]: new SequentialAni([
-                     new SexAni(world, top.params, "bed_2", draw_topping),
+                     new HookupAni(world, top.params, "bed_2", draw_topping),
                      new StartMotionAni(top.params, "bed_2"),
                  ]),
              }, {
