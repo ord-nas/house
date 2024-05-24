@@ -522,11 +522,9 @@
              }
 
              tick(current_time, layer) {
-                 if (this.current >= this.sequence.length) {
-                     return true;
-                 }
-                 const next = this.sequence[this.current].tick(current_time, layer);
-                 if (next) {
+                 const index = Math.min(this.current, this.sequence.length - 1);
+                 const next = this.sequence[index].tick(current_time, layer);
+                 if (next && this.current < this.sequence.length) {
                      this.current += 1;
                  }
                  return this.current >= this.sequence.length;
@@ -683,28 +681,55 @@
                      event: null,
                  };
                  world.event = {
-                     ani: new SimultaneousAni([
+                     ani:
                          new SequentialAni([
-                             new WalkAni(world.people.steve.params, "gym", "kitchen_chair_1"),
-                             new WalkAni(world.people.steve.params, "kitchen_chair_1", "kitchen_chair_1_seated", "behind_table"),
-                             new ContinueWavingAni(world.people.steve.params, "kitchen_chair_1_seated", "behind_table"),
+                             new SimultaneousAni([
+                                 new SequentialAni([
+                                     new WalkAni(world.people.steve.params, "gym", "kitchen_chair_1"),
+                                     new WalkAni(world.people.steve.params, "kitchen_chair_1", "kitchen_chair_1_seated", "behind_table"),
+                                     new ContinueWavingAni(world.people.steve.params, "kitchen_chair_1_seated", "behind_table", /*duration=*/0),
+                                 ]),
+                                 new SequentialAni([
+                                     new WalkAni(world.people.david.params, "living_chair_1", "kitchen_chair_2"),
+                                     new WalkAni(world.people.david.params, "kitchen_chair_2", "kitchen_chair_2_seated", "behind_table"),
+                                     new ContinueWavingAni(world.people.david.params, "kitchen_chair_2_seated", "behind_table", /*duration=*/0),
+                                 ]),
+                                 new SequentialAni([
+                                     new WalkAni(world.people.carlos.params, "desk_1", "kitchen_chair_3"),
+                                     new WalkAni(world.people.carlos.params, "kitchen_chair_3", "kitchen_chair_3_seated", "behind_table"),
+                                     new ContinueWavingAni(world.people.carlos.params, "kitchen_chair_3_seated", "behind_table", /*duration=*/0),
+                                 ]),
+                                 new SequentialAni([
+                                     new WalkAni(world.people.sandro.params, "bed_2", "kitchen_chair_4"),
+                                     new WalkAni(world.people.sandro.params, "kitchen_chair_4", "kitchen_chair_4_seated", "behind_table"),
+                                     new ContinueWavingAni(world.people.sandro.params, "kitchen_chair_4_seated", "behind_table", /*duration=*/0),
+                                 ]),
+                             ]),
+                             new SimultaneousAni([
+                                 new ContinueWavingAni(world.people.steve.params, "kitchen_chair_1_seated", "behind_table", /*duration=*/3000),
+                                 new ContinueWavingAni(world.people.david.params, "kitchen_chair_2_seated", "behind_table", /*duration=*/3000),
+                                 new ContinueWavingAni(world.people.carlos.params, "kitchen_chair_3_seated", "behind_table", /*duration=*/3000),
+                                 new ContinueWavingAni(world.people.sandro.params, "kitchen_chair_4_seated", "behind_table", /*duration=*/3000),
+                             ]),
+                             new SimultaneousAni([
+                                 new SequentialAni([
+                                     new WalkAni(world.people.steve.params, "kitchen_chair_1_seated", "kitchen_chair_1", "behind_table"),
+                                     new WalkAni(world.people.steve.params, "kitchen_chair_1", "gym"),
+                                 ]),
+                                 new SequentialAni([
+                                     new WalkAni(world.people.david.params, "kitchen_chair_2_seated", "kitchen_chair_2", "behind_table"),
+                                     new WalkAni(world.people.david.params, "kitchen_chair_2", "living_chair_1"),
+                                 ]),
+                                 new SequentialAni([
+                                     new WalkAni(world.people.carlos.params, "kitchen_chair_3_seated", "kitchen_chair_3", "behind_table"),
+                                     new WalkAni(world.people.carlos.params, "kitchen_chair_3", "desk_1"),
+                                 ]),
+                                 new SequentialAni([
+                                     new WalkAni(world.people.sandro.params, "kitchen_chair_4_seated", "kitchen_chair_4", "behind_table"),
+                                     new WalkAni(world.people.sandro.params, "kitchen_chair_4", "bed_2"),
+                                 ]),
+                             ]),
                          ]),
-                         new SequentialAni([
-                             new WalkAni(world.people.david.params, "living_chair_1", "kitchen_chair_2"),
-                             new WalkAni(world.people.david.params, "kitchen_chair_2", "kitchen_chair_2_seated", "behind_table"),
-                             new ContinueWavingAni(world.people.david.params, "kitchen_chair_2_seated", "behind_table"),
-                         ]),
-                         new SequentialAni([
-                             new WalkAni(world.people.carlos.params, "desk_1", "kitchen_chair_3"),
-                             new WalkAni(world.people.carlos.params, "kitchen_chair_3", "kitchen_chair_3_seated", "behind_table"),
-                             new ContinueWavingAni(world.people.carlos.params, "kitchen_chair_3_seated", "behind_table"),
-                         ]),
-                         new SequentialAni([
-                             new WalkAni(world.people.sandro.params, "bed_2", "kitchen_chair_4"),
-                             new WalkAni(world.people.sandro.params, "kitchen_chair_4", "kitchen_chair_4_seated", "behind_table"),
-                             new ContinueWavingAni(world.people.sandro.params, "kitchen_chair_4_seated", "behind_table"),
-                         ]),
-                     ]),
                  };
                  /* set_starting_state(world, world.people.steve);
                   * set_starting_state(world, world.people.david);
