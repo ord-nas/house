@@ -8,6 +8,7 @@
              carlos: "imgs/people/carlos/Carlos Head.png",
              sandro: "imgs/people/sandro/Sandro Head.png",
              grindr: "imgs/people/grindr/Grindr Head.png",
+             ticket: "imgs/people/ticket/Ticket.png",
              house: "imgs/house.png",
              table: "imgs/table.png",
              savor: "imgs/savor.png",
@@ -19,6 +20,8 @@
              biceps: "imgs/biceps.png",
              wave: "imgs/wave.png",
              squirt: "imgs/squirt.png",
+             pill: "imgs/pill.png",
+             dancing: "imgs/dancing.png",
          };
 
          const global_motion_graph = {
@@ -67,6 +70,9 @@
                  "offscreen_2": [1975, 1035],
                  "offscreen_3": [2050, 1035],
                  "offscreen_4": [2125, 1035],
+                 "ticket_offscreen_left": [-800, 100],
+                 "ticket_center": [875, 100],
+                 "ticket_offscreen_right": [2550, 100],
              },
              edges: [
                  ["living_chair_1", "living_chair_2"],
@@ -112,6 +118,8 @@
                  ["offscreen_1", "offscreen_2"],
                  ["offscreen_2", "offscreen_3"],
                  ["offscreen_3", "offscreen_4"],
+                 ["ticket_offscreen_left", "ticket_center"],
+                 ["ticket_center", "ticket_offscreen_right"],
              ],
          };
 
@@ -171,11 +179,6 @@
              "living_chair_1": continue_sitting_at("living_chair_1"),
              "living_chair_2": continue_sitting_at("living_chair_2"),
              "living_chair_3": continue_sitting_at("living_chair_3"),
-             /* "kitchen_chair_1": continue_sitting_at("kitchen_chair_1"),
-              * "kitchen_chair_2": continue_sitting_at("kitchen_chair_2"),
-              * "kitchen_chair_3": continue_sitting_at("kitchen_chair_3"),
-              * "kitchen_chair_4": continue_sitting_at("kitchen_chair_4"),*/
-             // "kitchen_cooking": continue_waving_at("kitchen_cooking"),
              "desk_1": continue_sitting_at("desk_1", {image: "work"}),
              "desk_2": continue_sitting_at("desk_2", {image: "work"}),
              "tv_chair_1": watch_tv_at("tv_chair_1"),
@@ -294,7 +297,7 @@
              };
          }
 
-         function make_person(head_image, arm_color, body_color, bounce_period, arm_period, top_proclivity, accessory = false) {
+         function make_person(head_image, arm_color, body_color, bounce_period, arm_period, top_proclivity, accessory = false, walking_speed=150) {
              return {
                  params: {
                      head_image: head_image,
@@ -309,7 +312,7 @@
                          offset_ms: 0,
                          period_ms: arm_period,
                      },
-                     walking_speed_pps: 150,
+                     walking_speed_pps: walking_speed,
                      top_proclivity: top_proclivity,
                      accessory: accessory,
                  },
@@ -478,6 +481,11 @@
          }
 
          function draw_nominal(params) {
+             /* params.head_image = global_world.images.ticket;
+              * params.text = "Polyglam";
+              * draw_ticket(params);
+              * return;*/
+             
              var canvas = document.getElementById("c");
              var ctx = canvas.getContext("2d");
              ctx.resetTransform();
@@ -652,6 +660,29 @@
              ctx.resetTransform();
          }
 
+         function draw_ticket(params) {
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
+             ctx.resetTransform();
+
+             ctx.scale(params.scale, params.scale);
+             ctx.translate(params.x / params.scale, params.y / params.scale);
+             const base_x = -params.head_image.width / 2;
+             const base_y = -params.head_image.height / 2;
+             ctx.drawImage(params.head_image, base_x, base_y);
+
+             ctx.fillStyle = "white";
+             ctx.font = "175px Inter";
+             const measure = ctx.measureText(params.speech);
+             const width = measure.width;
+             const height = measure.actualBoundingBoxAscent + measure.actualBoundingBoxDescent;
+             const text_x = base_x + params.head_image.width / 2 - width / 2;
+             const text_y = base_y + params.head_image.height / 2 + height / 2 - measure.actualBoundingBoxDescent;
+             ctx.fillText(params.speech, text_x, text_y);
+
+             ctx.resetTransform();
+         }
+         
          // The API for an animation is:
          //  * it has a tick() method that draws and returns whether the animation is done.
          //  * it has a request_done() method.
@@ -800,12 +831,13 @@
          }
 
          class WalkAni {
-             constructor(person_params, start_node, end_node, {layer = "", speech = null} = {}) {
+             constructor(person_params, start_node, end_node, {layer = "", speech = null, draw_fn = draw_nominal} = {}) {
                  this.person_params = person_params;
                  this.start_node = start_node;
                  this.end_node = end_node;
                  this.layer = layer;
                  this.speech = speech;
+                 this.draw_fn = draw_fn;
                  this.path = get_path(start_node, end_node);
                  this.start_time = null;
              }
@@ -826,7 +858,7 @@
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
-                 draw_nominal(params);
+                 this.draw_fn(params);
                  return path_point.finished;
              }
 
@@ -1078,9 +1110,16 @@
                  const host = possible_hosts[sequence_number % possible_hosts.length];
                  return hookup_event(this.world, host);
              }
+
+             create_party_event(sequence_number) {
+                 /* const possible_hosts = ["carlos", "steve", "david"];
+                  * const host = possible_hosts[sequence_number % possible_hosts.length];*/
+                 return party_event(this.world);
+             }
              
              create_event() {
                  const event_creators = [
+                     s => this.create_party_event(s),
                      s => this.create_hookup_event(s),
                      s => this.create_dinner_event(s),
                  ];
@@ -1305,6 +1344,68 @@
              return new Event(world, stages);
          }
 
+         function party_event(world) {
+             const ticket = world.people.ticket;
+             ticket.location = "ticket_offscreen_left";
+
+             const steve = world.people.steve;
+             const david = world.people.david;
+             const carlos = world.people.carlos;
+             const sandro = world.people.sandro;
+
+             const event_name = "Polyglam";
+             const stages = [{
+                 ticket: new SequentialAni([
+                     new WalkToAni(ticket, "ticket_center", {draw_fn: draw_ticket, speech: event_name}),
+                 ]),
+                 steve: null,
+                 carlos: null,
+                 sandro: null,
+                 david: null,
+             }, {
+                 steve: new SequentialAni([
+                     new WalkToAni(steve, "bathroom_1", {speech: world.images.exclamation}),
+                     new ContinueMotionAni(steve.params, "bathroom_1", {duration: 0}),
+                 ]),
+                 carlos: new SequentialAni([
+                     new WalkToAni(carlos, "bathroom_2", {speech: world.images.exclamation}),
+                     new ContinueMotionAni(carlos.params, "bathroom_2", {duration: 0}),
+                 ]),
+                 sandro: new SequentialAni([
+                     new WalkToAni(sandro, "bathroom_3", {speech: world.images.exclamation}),
+                     new ContinueMotionAni(sandro.params, "bathroom_3", {duration: 0}),
+                 ]),
+                 david: new SequentialAni([
+                     new WalkToAni(david, "bathroom_4", {speech: world.images.exclamation}),
+                     new ContinueMotionAni(david.params, "bathroom_4", {duration: 0}),
+                 ]),
+             }, {
+                 steve: new SequentialAni([
+                     new ContinueMotionAni(steve.params, "bathroom_1", {duration: 3000, speech: world.images.pill}),
+                     new WalkToAni(steve, "offscreen_1", {speech: world.images.dancing}),
+                 ]),
+                 carlos: new SequentialAni([
+                     new ContinueMotionAni(carlos.params, "bathroom_2", {duration: 3000, speech: world.images.pill}),
+                     new WalkToAni(carlos, "offscreen_2", {speech: world.images.dancing}),
+                 ]),
+                 sandro: new SequentialAni([
+                     new ContinueMotionAni(sandro.params, "bathroom_3", {duration: 3000, speech: world.images.pill}),
+                     new WalkToAni(sandro, "offscreen_3", {speech: world.images.dancing}),
+                 ]),
+                 david: new SequentialAni([
+                     new ContinueMotionAni(david.params, "bathroom_4", {duration: 3000, speech: "Sobriety!"}),
+                     new WalkToAni(david, "offscreen_4", {speech: world.images.dancing}),
+                 ]),
+             }, {
+                 ticket: new SequentialAni([
+                     new ContinueMotionAni(ticket.params, "ticket_center", {draw_fn: draw_ticket, speech: event_name, duration: 5000}),
+                     new WalkToAni(ticket, "ticket_offscreen_right", {draw_fn: draw_ticket, speech: event_name}),
+                 ]),
+             }];
+
+             return new Event(world, stages);
+         }
+
          var global_world = null;
          
          function main() {
@@ -1352,6 +1453,16 @@
                              /*arm_period=*/1500,
                              /*top_proclivity=*/0.0,
                              /*accessory=*/true,
+                         ),
+                         ticket: make_person(
+                             images.ticket,
+                             /*arm_color=*/"",
+                             /*body_color=*/"",
+                             /*bounce_period=*/1000,
+                             /*arm_period=*/1000,
+                             /*top_proclivity=*/0.0,
+                             /*accessory=*/true,
+                             /*walking_speed=*/450,
                          ),
                      },
                  };
