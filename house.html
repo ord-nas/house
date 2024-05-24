@@ -374,6 +374,23 @@
              draw_arm(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, 100, -2.5 * params.arm_t);
 
              ctx.drawImage(params.head_image, 30 + left, bounce_amount);
+
+             const speech_width = 200;
+             const speech_height = 200;
+             ctx.fillStyle = "white";
+             ctx.strokeStyle = "black";
+             ctx.beginPath();
+             ctx.moveTo(50 + left + 170/2, bounce_amount);
+             ctx.lineTo(50 + left + 170/2 + 30, -30);
+             ctx.lineTo(50 + left + 170/2 + speech_width/2, -30);
+             ctx.lineTo(50 + left + 170/2 + speech_width/2, -speech_height - 30);
+             ctx.lineTo(50 + left + 170/2 - speech_width/2, -speech_height - 30);
+             ctx.lineTo(50 + left + 170/2 - speech_width/2, -30);
+             ctx.lineTo(50 + left + 170/2 - 30, -30);
+             ctx.lineTo(50 + left + 170/2, bounce_amount);
+             ctx.fill();
+             ctx.stroke();
+             
              ctx.resetTransform();
          }
 
