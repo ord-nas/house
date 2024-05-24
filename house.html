@@ -121,6 +121,20 @@
              };
          }
 
+         function watch_tv_at(node) {
+             const seated_node = node + "_seated";
+             return (world, person) => {
+                 return new SequentialAni([
+                     new WalkAni(person.params, node, seated_node),
+                     new SimultaneousAni([
+                         new ContinueWavingAni(person.params, seated_node),
+                         new TvFlickerAni(),
+                     ]),
+                     new WalkAni(person.params, seated_node, node),
+                 ]);
+             };
+         }
+
          const global_simple_targets = {
              "living_chair_1": continue_sitting_at("living_chair_1"),
              "living_chair_2": continue_sitting_at("living_chair_2"),
@@ -132,8 +146,8 @@
              // "kitchen_cooking": continue_waving_at("kitchen_cooking"),
              "desk_1": continue_sitting_at("desk_1", {image: "work"}),
              "desk_2": continue_sitting_at("desk_2", {image: "work"}),
-             "tv_chair_1": continue_sitting_at("tv_chair_1"),
-             "tv_chair_2": continue_sitting_at("tv_chair_2"),
+             "tv_chair_1": watch_tv_at("tv_chair_1"),
+             "tv_chair_2": watch_tv_at("tv_chair_2"),
              "gym_bar": continue_waving_at("gym_bar"),
              "gym_bike": continue_sitting_at("gym_bike", {image: "biking"}),
          };
@@ -547,6 +561,42 @@
              can_request_done() { return this.duration === null; }
          }
 
+         class TvFlickerAni {
+             constructor(duration = null) {
+                 this.duration = duration;
+                 this.transitions = [300, 700, 900, 1400, 1500, 1600, 1800];
+                 const canvas = document.getElementById("c");
+                 this.ctx = canvas.getContext("2d");
+                 this.start_time = null;
+                 this.done = false;
+             }
+
+             tick(current_time, layer) {
+                 if (layer !== "") {
+                     return false;
+                 }
+                 if (this.start_time === null) {
+                     this.start_time = current_time;
+                 }
+                 if (this.duration !== null && current_time - this.start_time >= this.duration) {
+                     this.done = true;
+                 }
+                 const offset = current_time % 2000;
+                 const transition_count = this.transitions.filter(t => t < offset).length;
+                 const color = (transition_count % 2 == 0) ? "white" : "black";
+                 this.ctx.resetTransform();
+                 this.ctx.fillStyle = color;
+                 this.ctx.fillRect(1117, 525, 131, 65);
+                 return this.done;
+             }
+
+             request_done() {
+                 this.done = true;
+             }
+
+             can_request_done() { return this.duration === null; }
+         }
+
          class WalkAni {
              constructor(person_params, start_node, end_node, {layer = "", speech = null} = {}) {
                  this.person_params = person_params;
@@ -650,7 +700,7 @@
              }
 
              can_request_done() {
-                 this.children.every((a) => { return a.can_request_done(); });
+                 return this.children.every((a) => { return a.can_request_done(); });
              }
          }
 

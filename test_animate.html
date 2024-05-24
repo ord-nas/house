@@ -258,6 +258,7 @@
                  ctx.restore();
              }
 
+             ctx.fillStyle = "black";
              for (const [key, [x, y]] of Object.entries(global_motion_graph.nodes)) {
                  ctx.beginPath();
                  ctx.arc(x, y, 10, 0, 2 * Math.PI);
@@ -272,6 +273,9 @@
                  ctx.lineTo(x2, y2);
                  ctx.stroke();
              }
+
+             ctx.fillStyle = "white";
+             ctx.fillRect(1117, 525, 131, 65);
          }
 
          // A person has the follow properties:
