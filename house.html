@@ -10,6 +10,8 @@
              house: "imgs/house.png",
              table: "imgs/table.png",
              savor: "imgs/savor.png",
+             work: "imgs/work.png",
+             biking: "imgs/biking.png",
          };
 
          const global_motion_graph = {
@@ -95,17 +97,23 @@
          };
 
          function continue_waving_at(node) {
-             return (person) => {
+             return (world, person) => {
                  return new ContinueWavingAni(person.params, node);
              };
          }
 
-         function continue_sitting_at(node) {
+         function continue_sitting_at(node, {text = null, image = null} = {}) {
              const seated_node = node + "_seated";
-             return (person) => {
+             return (world, person) => {
+                 var speech = null;
+                 if (text !== null) {
+                     speech = text;
+                 } else if (image !== null) {
+                     speech = world.images[image];
+                 }
                  return new SequentialAni([
                      new WalkAni(person.params, node, seated_node, /*layer=*/"behind_table"),
-                     new ContinueWavingAni(person.params, seated_node, /*layer=*/"behind_table"),
+                     new ContinueWavingAni(person.params, seated_node, {layer: "behind_table", speech: speech}),
                      new WalkAni(person.params, seated_node, node, /*layer=*/"behind_table"),
                  ]);
              };
@@ -120,12 +128,12 @@
               * "kitchen_chair_3": continue_sitting_at("kitchen_chair_3"),
               * "kitchen_chair_4": continue_sitting_at("kitchen_chair_4"),*/
              // "kitchen_cooking": continue_waving_at("kitchen_cooking"),
-             "desk_1": continue_sitting_at("desk_1"),
-             "desk_2": continue_sitting_at("desk_2"),
+             "desk_1": continue_sitting_at("desk_1", {image: "work"}),
+             "desk_2": continue_sitting_at("desk_2", {image: "work"}),
              "tv_chair_1": continue_sitting_at("tv_chair_1"),
              "tv_chair_2": continue_sitting_at("tv_chair_2"),
              "gym_bar": continue_waving_at("gym_bar"),
-             "gym_bike": continue_sitting_at("gym_bike"),
+             "gym_bike": continue_sitting_at("gym_bike", {image: "biking"}),
          };
 
          function get_held_resources(world) {
@@ -385,11 +393,11 @@
 
              ctx.drawImage(params.head_image, 30 + left, bounce_amount);
 
-             if (params.arm.period_ms < 2000) {
-                 params.speech = "Dinner's Ready!";
-             } else {
-                 params.speech = global_world.images.savor;
-             }
+             /* if (params.arm.period_ms < 2000) {
+              *     params.speech = "Dinner's Ready!";
+              * } else {
+              *     params.speech = global_world.images.savor;
+              * }*/
              if (params.speech !== null && params.speech !== undefined) {
                  ctx.fillStyle = "white";
                  ctx.strokeStyle = "black";
@@ -499,13 +507,14 @@
          }
 
          class ContinueWavingAni {
-             constructor(person_params, node, layer = "", duration = null) {
+             constructor(person_params, node, {layer = "", duration = null, speech = null} = {}) {
                  this.person_params = person_params;
                  [this.x, this.y] = global_motion_graph.nodes[node];
                  this.layer = layer;
+                 this.duration = duration;
+                 this.speech = speech;
                  this.start_time = null;
                  this.done = false;
-                 this.duration = duration;
              }
 
              tick(current_time, layer) {
@@ -521,6 +530,7 @@
                  var params = {
                      x: this.x,
                      y: this.y,
+                     speech: this.speech,
                  };
                  Object.assign(params, this.person_params);
                  Object.assign(params, get_wave_params_cyclic(this.person_params, current_time, this.start_time));
@@ -748,7 +758,7 @@
                          person.next_location = location;
                          person.next_animation = new SequentialAni([
                              new WalkAni(person.params, person.location, person.next_location),
-                             make_ani_fn(person),
+                             make_ani_fn(world, person),
                          ]);
                          person.animation.request_done();
                      }
@@ -827,29 +837,29 @@
                      steve: new SequentialAni([
                          new WalkToAni(steve, "kitchen_chair_1"),
                          new WalkToAni(steve, "kitchen_chair_1_seated", "behind_table"),
-                         new ContinueWavingAni(steve.params, "kitchen_chair_1_seated", "behind_table", /*duration=*/0),
+                         new ContinueWavingAni(steve.params, "kitchen_chair_1_seated", {layer: "behind_table", duration: 0}),
                      ]),
                      david: new SequentialAni([
                          new WalkToAni(david, "kitchen_chair_2"),
                          new WalkToAni(david, "kitchen_chair_2_seated", "behind_table"),
-                         new ContinueWavingAni(david.params, "kitchen_chair_2_seated", "behind_table", /*duration=*/0),
+                         new ContinueWavingAni(david.params, "kitchen_chair_2_seated", {layer: "behind_table", duration: 0}),
                      ]),
                      carlos: new SequentialAni([
                          new WalkToAni(carlos, "kitchen_chair_3"),
                          new WalkToAni(carlos, "kitchen_chair_3_seated", "behind_table"),
-                         new ContinueWavingAni(carlos.params, "kitchen_chair_3_seated", "behind_table", /*duration=*/0),
+                         new ContinueWavingAni(carlos.params, "kitchen_chair_3_seated", {layer: "behind_table", duration: 0}),
                      ]),
                      sandro: new SequentialAni([
                          new WalkToAni(sandro, "kitchen_chair_4"),
                          new WalkToAni(sandro, "kitchen_chair_4_seated", "behind_table"),
-                         new ContinueWavingAni(sandro.params, "kitchen_chair_4_seated", "behind_table", /*duration=*/0),
+                         new ContinueWavingAni(sandro.params, "kitchen_chair_4_seated", {layer: "behind_table", duration: 0}),
                      ]),
                  },
                  {
-                     steve: new ContinueWavingAni(steve.params, "kitchen_chair_1_seated", "behind_table", /*duration=*/3000),
-                     david: new ContinueWavingAni(david.params, "kitchen_chair_2_seated", "behind_table", /*duration=*/3000),
-                     carlos: new ContinueWavingAni(carlos.params, "kitchen_chair_3_seated", "behind_table", /*duration=*/3000),
-                     sandro: new ContinueWavingAni(sandro.params, "kitchen_chair_4_seated", "behind_table", /*duration=*/3000),
+                     steve: new ContinueWavingAni(steve.params, "kitchen_chair_1_seated", {layer: "behind_table", duration: 3000}),
+                     david: new ContinueWavingAni(david.params, "kitchen_chair_2_seated", {layer: "behind_table", duration: 3000}),
+                     carlos: new ContinueWavingAni(carlos.params, "kitchen_chair_3_seated", {layer: "behind_table", duration: 3000}),
+                     sandro: new ContinueWavingAni(sandro.params, "kitchen_chair_4_seated", {layer: "behind_table", duration: 3000}),
                  },
                  {
                      steve: new SequentialAni([
@@ -912,16 +922,9 @@
                      last_event_finish_time: new Date().getTime(),
                  };
                  global_world = world;
-                 // world.event = sample_event(world);
                  for (const [name, person] of Object.entries(world.people)) {
                      set_starting_state(world, person);
                  }
-                 /* world.people.steve.animation = new SequentialAni([
-                  *     new StartWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                  *     //new ContinueWavingAni(world.people.steve.params, global_motion_graph.nodes.living_chair_2),
-                  *     new WalkAni(world.people.steve.params, "living_chair_2", "gym"),
-                  *     new StopWavingAni(world.people.steve.params, global_motion_graph.nodes.gym),
-                  * ]);*/
                  set_up_animation_loop(world);
              });
          }
