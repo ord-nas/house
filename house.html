@@ -7,6 +7,7 @@
              david: "imgs/people/david/David Head.png",
              carlos: "imgs/people/carlos/Carlos Head.png",
              sandro: "imgs/people/sandro/Sandro Head.png",
+             grindr: "imgs/people/grindr/Grindr Head.png",
              house: "imgs/house.png",
              table: "imgs/table.png",
              savor: "imgs/savor.png",
@@ -16,6 +17,7 @@
              exclamation: "imgs/exclamation.png",
              bar: "imgs/bar.png",
              biceps: "imgs/biceps.png",
+             wave: "imgs/wave.png",
          };
 
          const global_motion_graph = {
@@ -58,6 +60,12 @@
                  "gym_bar": [778, 490],
                  "gym_bike": [588, 490],
                  "gym_bike_seated": [588, 435],
+                 "doorway_inside": [1510, 1035],
+                 "doorway_outside": [1650, 1035],
+                 "offscreen_1": [1900, 1035],
+                 "offscreen_2": [1975, 1035],
+                 "offscreen_3": [2050, 1035],
+                 "offscreen_4": [2125, 1035],
              },
              edges: [
                  ["living_chair_1", "living_chair_2"],
@@ -97,6 +105,12 @@
                  ["tv_chair_1", "tv_chair_1_seated"],
                  ["tv_chair_2", "tv_chair_2_seated"],
                  ["gym_bike", "gym_bike_seated"],
+                 ["stairs_1_bottom", "doorway_inside"],
+                 ["doorway_inside", "doorway_outside"],
+                 ["doorway_outside", "offscreen_1"],
+                 ["offscreen_1", "offscreen_2"],
+                 ["offscreen_2", "offscreen_3"],
+                 ["offscreen_3", "offscreen_4"],
              ],
          };
 
@@ -279,7 +293,7 @@
              };
          }
 
-         function make_person(head_image, arm_color, body_color, bounce_period, arm_period) {
+         function make_person(head_image, arm_color, body_color, bounce_period, arm_period, accessory = false) {
              return {
                  params: {
                      head_image: head_image,
@@ -295,6 +309,7 @@
                          period_ms: arm_period,
                      },
                      walking_speed_pps: 150,
+                     accessory: accessory,
                  },
                  animation: null,
                  next_action_time: null,
@@ -811,7 +826,13 @@
                  // Try to acquire everyone that hasn't been acquired yet.
                  for (const [name, person] of Object.entries(this.people)) {
                      if (person.event !== this && person.next_event !== this) {
-                         person.next_event = this;
+                         if (person.params.accessory) {
+                             // If this is an accessory person, we can just grab them immediately.
+                             person.event = this;
+                         } else {
+                             // Otherwise we have to queue ourselves.
+                             person.next_event = this;
+                         }
                      }
                  }
 
@@ -834,8 +855,11 @@
                      var desired_ani = stage[name];
                      if (desired_ani === undefined) desired_ani = null;
                      if (all_acquired && desired_ani !== null && person.animation !== desired_ani) {
-                         person.animation.request_done();
-                         const done = person.animation.tick(current_time, layer);
+                         var done = true;
+                         if (person.animation !== null) {
+                             person.animation.request_done();
+                             done = person.animation.tick(current_time, layer);
+                         }
                          if (done) {
                              person.animation = desired_ani;
                              person.next_action_time = null;
@@ -843,17 +867,23 @@
                              person.next_location = null;
                          }
                      } else if (all_acquired && desired_ani === null) {
-                         var done = person.animation.tick(current_time, layer);
-                         done |= person.animation.can_request_done();
+                         var done = true;
+                         if (person.animation !== null) {
+                             done = person.animation.tick(current_time, layer);
+                             done |= person.animation.can_request_done();
+                         }
                          if (done) {
                              this.people_done.add(name);
                          }
                      } else if (all_acquired) {
-                         const done = person.animation.tick(current_time, layer);
+                         var done = true;
+                         if (person.animation !== null) {
+                             done = person.animation.tick(current_time, layer);
+                         }
                          if (done) {
                              this.people_done.add(name);
                          }
-                     } else {
+                     } else if (person.animation !== null) {
                          person.animation.tick(current_time, layer);
                      }
                  }
@@ -902,10 +932,26 @@
                  }
              }
 
-             create_event() {
+             create_dinner_event(sequence_number) {
                  const possible_cooks = ["steve", "david", "sandro", "carlos"];
-                 const cook = possible_cooks[this.index % possible_cooks.length];
-                 const event = dinner_event(this.world, cook);
+                 const cook = possible_cooks[sequence_number % possible_cooks.length];
+                 return dinner_event(this.world, cook);
+             }
+
+             create_hookup_event(sequence_number) {
+                 const possible_hosts = ["carlos", "steve", "david"];
+                 const host = possible_hosts[sequence_number % possible_hosts.length];
+                 return hookup_event(this.world, host);
+             }
+             
+             create_event() {
+                 const event_creators = [
+                     s => this.create_hookup_event(s),
+                     s => this.create_dinner_event(s),
+                 ];
+                 const event_type = this.index % event_creators.length;
+                 const event_sequence_number = Math.floor(this.index / event_creators.length);
+                 const event = event_creators[event_type](event_sequence_number);
                  this.index += 1;
                  return event;
              }
@@ -921,6 +967,11 @@
 
                  if (person.event !== null) {
                      // This person is participating in an event; let the event handle animation.
+                     continue;
+                 }
+
+                 if (person.params.accessory) {
+                     // This person is an accessory; only animate them during events.
                      continue;
                  }
 
@@ -1073,6 +1124,37 @@
              return new Event(world, [stage_1, stage_2, stage_3, stage_4, stage_5]);
          }
 
+         function hookup_event(world, host_name) {
+             const host = world.people[host_name];
+             const grindr = world.people.grindr;
+             grindr.location = "offscreen_1";
+
+             const stages = [{
+                 [host_name]: null,
+                 grindr: new SequentialAni([
+                     new WalkToAni(grindr, "doorway_outside"),
+                     new ContinueMotionAni(grindr.params, "doorway_outside", {duration: 0, speech: "Ding dong!"}),
+                 ]),
+             }, {
+                 [host_name]: new WalkToAni(host, "doorway_inside", {speech: world.images.exclamation}),
+                 grindr: new ContinueMotionAni(grindr.params, "doorway_outside", {duration: 0, speech: "Ding dong!"}),
+             }, {
+                 [host_name]: new ContinueMotionAni(host.params, "doorway_inside", {duration: 2000, speech: world.images.wave}),
+                 grindr: new ContinueMotionAni(grindr.params, "doorway_outside", {duration: 2000, speech: world.images.wave}),
+             }, {
+                 [host_name]: new WalkToAni(host, "bed_1"),
+                 grindr: new WalkToAni(grindr, "bed_2"),
+             }, {
+                 [host_name]: new ContinueMotionAni(host.params, "bed_1", {duration: 8000}),
+                 grindr: new ContinueMotionAni(grindr.params, "bed_2", {duration: 8000}),
+             }, {
+                 [host_name]: new ContinueMotionAni(host.params, "bed_1", {duration: 0, speech: world.images.wave}),
+                 grindr: new WalkToAni(grindr, "offscreen_1"),
+             }];
+
+             return new Event(world, stages);
+         }
+
          var global_world = null;
          
          function main() {
@@ -1108,11 +1190,20 @@
                              /*bounce_period=*/1000,
                              /*arm_period=*/1300
                          ),
+                         grindr: make_person(
+                             images.grindr,
+                             /*arm_color=*/"blue",
+                             /*body_color=*/"green",
+                             /*bounce_period=*/1200,
+                             /*arm_period=*/1500,
+                             /*accessory=*/true,
+                         ),
                      },
                  };
                  world.event_manager = new EventManager(world);
                  global_world = world;
                  for (const [name, person] of Object.entries(world.people)) {
+                     if (person.params.accessory) continue;
                      set_starting_state(world, person);
                  }
                  set_up_animation_loop(world);
@@ -1124,6 +1215,6 @@
         </script>
     </head>
     <body>
-        <canvas id="c" width="2300px" height="1100px"> </canvas>
+        <canvas id="c" width="1750px" height="1100px"> </canvas>
     </body>
 </html>
