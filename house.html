@@ -608,6 +608,16 @@
                      }
                  }
 
+                 // Count the number of acquired people.
+                 var num_acquired = 0;
+                 for (const [name, person] of Object.entries(this.people)) {
+                     if (person.event === this) {
+                         num_acquired += 1;
+                     }
+                 }
+                 const num_people = Object.keys(this.people).length;
+                 const all_acquired = (num_acquired === num_people);
+
                  // Deal with all the people.
                  var num_done = 0;
                  for (const [name, person] of Object.entries(this.people)) {
@@ -616,7 +626,7 @@
                      }
                      
                      const desired_ani = stage[name];
-                     if (desired_ani !== null && person.animation !== desired_ani) {
+                     if (all_acquired && desired_ani !== null && person.animation !== desired_ani) {
                          person.animation.request_done();
                          const done = person.animation.tick(current_time, layer);
                          if (done) {
@@ -627,14 +637,14 @@
                          }
                      } else {
                          const done = person.animation.tick(current_time, layer);
-                         if (done) {
+                         if (all_acquired && done) {
                              num_done += 1;
                          }
                      }
                  }
 
                  // Check if we can move on to the next stage.
-                 if (num_done === Object.keys(this.people).length && this.current < this.stages.length) {
+                 if (num_done === num_people && this.current < this.stages.length) {
                      this.current += 1;
                  }
 
