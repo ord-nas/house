@@ -1468,8 +1468,9 @@
                  ]),
              }, {
                  ticket: new SequentialAni([
-                     new ContinueMotionAni(ticket.params, "ticket_center", {draw_fn: draw_ticket, speech: event_name, duration: 5000}),
+                     new ContinueMotionAni(ticket.params, "ticket_center", {draw_fn: draw_ticket, speech: event_name, duration: 2000}),
                      new WalkToAni(ticket, "ticket_offscreen_right", {draw_fn: draw_ticket, speech: event_name}),
+                     new ContinueMotionAni(ticket.params, "ticket_offscreen_right", {draw_fn: draw_ticket, speech: event_name, duration: 0}),
                  ]),
              }];
 
