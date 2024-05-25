@@ -242,6 +242,7 @@
                  const next_group = get_location_group(person.next_location);
                  if (next_group !== null) {
                      groups.add(next_group);
+                     continue;
                  }
                  if (person.animation === null) continue;
                  if (person.animation.can_request_done()) continue;
