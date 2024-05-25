@@ -239,11 +239,16 @@
          function get_soon_to_be_occupied_location_groups(world) {
              var groups = new Set();
              for (const [name, person] of Object.entries(world.people)) {
+                 const next_group = get_location_group(person.next_location);
+                 if (next_group !== null) {
+                     groups.add(next_group);
+                 }
                  if (person.animation === null) continue;
                  if (person.animation.can_request_done()) continue;
                  const group = get_location_group(person.location);
-                 if (group === null) continue;
-                 groups.add(group);
+                 if (group !== null) {
+                     groups.add(group);
+                 }
              }
              return groups;
          }
@@ -269,19 +274,20 @@
                  }
              }
 
-
-             // Nominal is 2x more likely than disfavored.
-             // Favored is 3x more likely than nominal.
-             var arr = [];
-             arr = arr.concat(disfavored);
-             for (var i = 0; i < 2; i += 1) arr = arr.concat(nominal);
-             for (var i = 0; i < 6; i += 1) arr = arr.concat(favored);
-             if (arr.length == 0) {
-                 return null;
-             }
              console.log(favored);
-             // console.log(arr);
-             return arr[Math.floor(Math.random() * arr.length)];
+             if (favored.length > 0) {
+                 return favored[Math.floor(Math.random() * favored.length)]
+             }
+
+             if (nominal.length > 0) {
+                 return nominal[Math.floor(Math.random() * nominal.length)]
+             }
+
+             if (disfavored.length > 0) {
+                 return disfavored[Math.floor(Math.random() * nominal.length)]
+             }
+
+             return null
          }
 
          function set_starting_state(world, person) {
