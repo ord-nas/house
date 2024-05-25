@@ -1093,7 +1093,7 @@
                      }
                  } else {
                      // Maybe set up a new event.
-                     if (current_time - this.last_event_finish_time > 1000) {
+                     if (current_time - this.last_event_finish_time > 50000) {
                          this.event = this.create_event();
                          console.log("installed event!");
                      }
@@ -1120,9 +1120,9 @@
              
              create_event() {
                  const event_creators = [
-                     s => this.create_party_event(s),
                      s => this.create_hookup_event(s),
                      s => this.create_dinner_event(s),
+                     s => this.create_party_event(s),
                  ];
                  const event_type = this.index % event_creators.length;
                  const event_sequence_number = Math.floor(this.index / event_creators.length);
@@ -1156,7 +1156,7 @@
                      // Case 1: not yet in the steady-state for this animation.
                      const in_steady_state = done || person.animation.can_request_done();
                      if (in_steady_state) {
-                         person.next_action_time = current_time + 3000; // TODO tweak.
+                         person.next_action_time = current_time + 5000 + Math.random() * 5000;
                      }
                  } else if (current_time < person.next_action_time) {
                      // Case 2: waiting for the correct time to start the next animation.
