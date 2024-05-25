@@ -227,8 +227,8 @@
                  return;
              }
              const [location, make_ani_fn] = kv;
-             person.animation = new ContinueMotionAni(person.params, location);
              person.location = location;
+             person.animation = make_ani_fn(world, person);
          }
          
          function get_graph_neighbors() {
