@@ -21,6 +21,7 @@
              wave: "imgs/wave.png",
              squirt: "imgs/squirt.png",
              pill: "imgs/pill.png",
+             drink: "imgs/drink.png",
              dancing: "imgs/dancing.png",
          };
 
@@ -1112,9 +1113,9 @@
              }
 
              create_party_event(sequence_number) {
-                 /* const possible_hosts = ["carlos", "steve", "david"];
-                  * const host = possible_hosts[sequence_number % possible_hosts.length];*/
-                 return party_event(this.world);
+                 const possible_parties = ["Electroluxx", "XOXO", "Velvet", "Gemini", "Polyglam"];
+                 const party = possible_parties[sequence_number % possible_parties.length];
+                 return party_event(this.world, party);
              }
              
              create_event() {
@@ -1344,7 +1345,7 @@
              return new Event(world, stages);
          }
 
-         function party_event(world) {
+         function party_event(world, event_name) {
              const ticket = world.people.ticket;
              ticket.location = "ticket_offscreen_left";
 
@@ -1353,7 +1354,6 @@
              const carlos = world.people.carlos;
              const sandro = world.people.sandro;
 
-             const event_name = "Polyglam";
              const stages = [{
                  ticket: new SequentialAni([
                      new WalkToAni(ticket, "ticket_center", {draw_fn: draw_ticket, speech: event_name}),
@@ -1389,7 +1389,7 @@
                      new WalkToAni(carlos, "offscreen_2", {speech: world.images.dancing}),
                  ]),
                  sandro: new SequentialAni([
-                     new ContinueMotionAni(sandro.params, "bathroom_3", {duration: 3000, speech: world.images.pill}),
+                     new ContinueMotionAni(sandro.params, "bathroom_3", {duration: 3000, speech: world.images.drink}),
                      new WalkToAni(sandro, "offscreen_3", {speech: world.images.dancing}),
                  ]),
                  david: new SequentialAni([
