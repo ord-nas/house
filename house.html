@@ -151,12 +151,12 @@
              const seated_node = node + "_seated";
              return (world, person) => {
                  return new SequentialAni([
-                     new WalkAni(person.params, node, seated_node),
+                     new WalkAni(person.params, node, seated_node, {layer: "behind_table"}),
                      new SimultaneousAni([
-                         new ContinueMotionAni(person.params, seated_node),
+                         new ContinueMotionAni(person.params, seated_node, {layer: "behind_table"}),
                          new TvFlickerAni(),
                      ]),
-                     new WalkAni(person.params, seated_node, node),
+                     new WalkAni(person.params, seated_node, node, {layer: "behind_table"}),
                  ]);
              };
          }
@@ -871,7 +871,7 @@
              }
 
              tick(current_time, layer) {
-                 if (layer !== "") {
+                 if (layer !== "behind_table") {
                      return false;
                  }
                  if (this.start_time === null) {
