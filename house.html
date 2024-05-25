@@ -247,7 +247,7 @@
              }
              return groups;
          }
-         
+
          function get_biased_key_value(world, d, current_location) {
              var favored = [];
              var disfavored = [];
@@ -255,7 +255,7 @@
 
              const current_group = get_location_group(current_location);
              const soon_to_be_occupied_groups = get_soon_to_be_occupied_location_groups(world);
-             
+
              for (const [key, value] of Object.entries(d)) {
                  const group = get_location_group(key);
                  if (group === null) {
@@ -294,7 +294,7 @@
              person.location = location;
              person.animation = make_ani_fn(world, person);
          }
-         
+
          function get_graph_neighbors() {
              var neighbors = {};
              for (var [n1, n2] of global_motion_graph.edges) {
@@ -550,7 +550,7 @@
               * params.text = "Polyglam";
               * draw_ticket(params);
               * return;*/
-             
+
              var canvas = document.getElementById("c");
              var ctx = canvas.getContext("2d");
              ctx.resetTransform();
@@ -580,7 +580,7 @@
              ctx.drawImage(params.head_image, 30 + left, bounce_amount);
 
              draw_speech(ctx, params, bounce_amount);
-             
+
              ctx.resetTransform();
          }
 
@@ -606,7 +606,7 @@
              ctx.beginPath();
              ctx.arc(50 + left + 170/2, top, 170/2, 0, 2 * Math.PI);
              ctx.fill();
-             
+
              ctx.drawImage(params.head_image, 30 + left, 0);
 
              const arm_offset_x = 10;
@@ -616,13 +616,13 @@
              draw_arm_lifting(ctx, params.arm_color, 50 + left + 170 - arm_offset_x, top + arm_offset_y, 20, arm_offset);
 
              draw_speech(ctx, params, 0);
-             
+
              ctx.resetTransform();
              ctx.scale(0.25, 0.25);
              ctx.translate(0, -500);
              ctx.translate(0, arm_offset - 80);
              ctx.drawImage(global_world.images.bar, 0, 0);
-             
+
              ctx.resetTransform();
          }
 
@@ -671,7 +671,7 @@
              ctx.drawImage(params.head_image, 30 + left, 0);
 
              draw_speech(ctx, params, 0);
-             
+
              ctx.resetTransform();
          }
 
@@ -721,7 +721,7 @@
              ctx.drawImage(params.head_image, 30 + left, 0);
 
              draw_speech(ctx, params, 0);
-             
+
              ctx.resetTransform();
          }
 
@@ -747,7 +747,7 @@
 
              ctx.resetTransform();
          }
-         
+
          // The API for an animation is:
          //  * it has a tick() method that draws and returns whether the animation is done.
          //  * it has a request_done() method.
@@ -782,7 +782,7 @@
              }
 
              request_done() {}
-             
+
              can_request_done() { return false; }
          }
 
@@ -815,7 +815,7 @@
              }
 
              request_done() {}
-             
+
              can_request_done() { return false; }
          }
 
@@ -1083,7 +1083,7 @@
                      if (person.event !== this) {
                          continue;
                      }
-                     
+
                      var desired_ani = stage[name];
                      if (desired_ani === undefined) desired_ani = null;
                      if (all_acquired && desired_ani !== null && person.animation !== desired_ani) {
@@ -1181,7 +1181,7 @@
                  const party = possible_parties[sequence_number % possible_parties.length];
                  return party_event(this.world, party);
              }
-             
+
              create_event() {
                  const event_creators = [
                      s => this.create_hookup_event(s),
@@ -1256,7 +1256,7 @@
              // Animate the currently-active event, if any.
              world.event_manager.tick(current_time, layer);
          }
-         
+
          function set_up_animation_loop(world) {
              function tick() {
                  const current_time = new Date().getTime();
@@ -1274,7 +1274,7 @@
 
                  // Animate behind_table layer.
                  animate(world, current_time, "behind_table");
-                 
+
                  // Draw table.
                  ctx.resetTransform();
                  ctx.scale(0.25, 0.25);
@@ -1300,7 +1300,7 @@
                  .sort((a, b) => a[1] - b[1])
                  .map(([p, order]) => p)
                  .map((name) => [name, world.people[name]]);
-             
+
              const stage_1 = {
                  [cook_name]: new SequentialAni([
                      new WalkToAni(cook, "kitchen_fridge"),
@@ -1471,7 +1471,7 @@
          }
 
          var global_world = null;
-         
+
          function main() {
              load_images().then((images) => {
                  const world = {
