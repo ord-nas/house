@@ -122,6 +122,12 @@
                  ["ticket_offscreen_left", "ticket_center"],
                  ["ticket_center", "ticket_offscreen_right"],
              ],
+             groups: [
+                 ["living_chair_1", "living_chair_2", "living_chair_3"],
+                 ["tv_chair_1", "tv_chair_2"],
+                 ["gym_bike", "gym_bar"],
+                 ["desk_1", "desk_2"],
+             ]
          };
 
          function continue_motion_at(node) {
@@ -217,6 +223,64 @@
              if (arr.length == 0) {
                  return null;
              }
+             return arr[Math.floor(Math.random() * arr.length)];
+         }
+
+         function get_location_group(location) {
+             if (location === null || location === undefined) return null;
+             for (var i = 0; i < global_motion_graph.groups.length; i += 1) {
+                 if (global_motion_graph.groups[i].includes(location)) {
+                     return i;
+                 }
+             }
+             return null;
+         }
+
+         function get_soon_to_be_occupied_location_groups(world) {
+             var groups = new Set();
+             for (const [name, person] of Object.entries(world.people)) {
+                 if (person.animation === null) continue;
+                 if (person.animation.can_request_done()) continue;
+                 const group = get_location_group(person.location);
+                 if (group === null) continue;
+                 groups.add(group);
+             }
+             return groups;
+         }
+         
+         function get_biased_key_value(world, d, current_location) {
+             var favored = [];
+             var disfavored = [];
+             var nominal = [];
+
+             const current_group = get_location_group(current_location);
+             const soon_to_be_occupied_groups = get_soon_to_be_occupied_location_groups(world);
+             
+             for (const [key, value] of Object.entries(d)) {
+                 const group = get_location_group(key);
+                 if (group === null) {
+                     nominal.push([key, value]);
+                 } else if (group === current_group) {
+                     disfavored.push([key, value]);
+                 } else if (soon_to_be_occupied_groups.has(group)) {
+                     favored.push([key, value]);
+                 } else {
+                     nominal.push([key, value]);
+                 }
+             }
+
+
+             // Nominal is 2x more likely than disfavored.
+             // Favored is 3x more likely than nominal.
+             var arr = [];
+             arr = arr.concat(disfavored);
+             for (var i = 0; i < 2; i += 1) arr = arr.concat(nominal);
+             for (var i = 0; i < 6; i += 1) arr = arr.concat(favored);
+             if (arr.length == 0) {
+                 return null;
+             }
+             console.log(favored);
+             // console.log(arr);
              return arr[Math.floor(Math.random() * arr.length)];
          }
 
@@ -1163,7 +1227,7 @@
                  } else if (person.next_animation === null && person.next_event === null) {
                      // Case 3: try to pick another animation.
                      const targets = get_available_simple_targets(world);
-                     const kv = get_random_key_value(targets);
+                     const kv = get_biased_key_value(world, targets, person.location);
                      if (kv !== null) {
                          const [location, make_ani_fn] = kv;
                          person.next_location = location;
