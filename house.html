@@ -130,12 +130,6 @@
              ]
          };
 
-         function continue_motion_at(node) {
-             return (world, person) => {
-                 return new ContinueMotionAni(person.params, node);
-             };
-         }
-
          function continue_sitting_at(node, {text = null, image = null} = {}) {
              const seated_node = node + "_seated";
              return (world, person) => {
