@@ -277,6 +277,8 @@
                  ctx.fill();
              }
 
+             ctx.strokeStyle = "black";
+             ctx.lineWidth = 1;
              for (const [n1, n2] of global_motion_graph.edges) {
                  const [x1, y1] = global_motion_graph.nodes[n1];
                  const [x2, y2] = global_motion_graph.nodes[n2];
@@ -290,6 +292,17 @@
              ctx.fillRect(1117, 525, 131, 65);
              ctx.fillStyle = "#fde3a8";
              ctx.fillRect(690, 420, 173, 47);
+
+             // Picture frames.
+             ctx.lineWidth = 4;
+             ctx.strokeStyle = "yellow";
+             ctx.strokeRect(398, 538, 55, 54);
+             ctx.strokeRect(630, 575, 50, 45);
+             ctx.strokeRect(688, 575, 50, 45);
+             ctx.strokeRect(745, 575, 50, 45);
+             ctx.strokeRect(233, 833, 88, 55);
+             ctx.strokeRect(423, 930, 22, 18);
+             ctx.strokeRect(1038, 555, 30, 28);
          }
 
          // A person has the follow properties:
