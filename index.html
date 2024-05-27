@@ -155,6 +155,8 @@
          var global_photo_frame_mode = false;
          var global_photo_frame_images = new Array(21).fill(null);
          var global_photo_frame_cursor = 0;
+         
+         var global_started = false;
 
          function continue_sitting_at(node, {text = null, image = null, mark_on_done = null} = {}) {
              const seated_node = node + "_seated";
@@ -1176,11 +1178,15 @@
              constructor(world) {
                  this.world = world;
                  this.event = null;
-                 this.last_event_finish_time = new Date().getTime();
+                 this.last_event_finish_time = null;
                  this.index = 0;
              }
 
              tick(current_time, layer) {
+                 if (this.last_event_finish_time === null) {
+                     this.last_event_finish_time = new Date().getTime();
+                 }
+                 
                  if (this.event !== null) {
                      // Animate the currently-active event.
                      const done = this.event.tick(current_time, layer);
@@ -1234,14 +1240,17 @@
                     click_y >= box_y && click_y <= box_y + height;
          }
 
-         function handle_canvas_click(event) {
+         function handle_canvas_click(event, world) {
              const canvas = document.getElementById("c");
              const canvas_left = canvas.offsetLeft + canvas.clientLeft;
              const canvas_top = canvas.offsetTop + canvas.clientTop;
              const x = event.pageX - canvas_left;
              const y = event.pageY - canvas_top;
              
-             if (global_photo_frame_mode === false) {
+             if (global_started === false) {
+                 global_started = true;
+                 set_up_animation_loop(world);
+             } else if (global_photo_frame_mode === false) {
                  if (in_bounding_box(x, y, 398, 538, 55, 54) ||
                      in_bounding_box(x, y, 630, 575, 50, 45) ||
                      in_bounding_box(x, y, 688, 575, 50, 45) ||
@@ -1394,8 +1403,6 @@
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
-
-             canvas.addEventListener('click', handle_canvas_click);
          }
 
          function dinner_event(world, cook_name) {
@@ -1649,12 +1656,32 @@
                      },
                  };
                  world.event_manager = new EventManager(world);
-                 global_world = world;
+                 global_world = world; // Yuck, whatever.
+
                  for (const [name, person] of Object.entries(world.people)) {
                      if (person.params.accessory) continue;
                      set_starting_state(world, person);
                  }
-                 set_up_animation_loop(world);
+
+                 // Draw start screen.
+                 var canvas = document.getElementById("c");
+                 var ctx = canvas.getContext("2d");
+                 ctx.resetTransform();
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 ctx.scale(0.25, 0.25);
+                 ctx.translate(0, -500);
+                 ctx.drawImage(world.images.house, 0, 0);
+                 ctx.resetTransform();
+                 ctx.fillStyle = "white";
+                 ctx.fillRect(175, 520, 1375, 185);
+                 ctx.fillStyle = "red";
+                 ctx.font = "110px Inter";
+                 ctx.fillText("Click Anywhere to Start", 185, 650);
+
+                 // Set up click handler.
+                 canvas.addEventListener('click', (event) => {
+                     handle_canvas_click(event, world);
+                 });
              });
          }
 
