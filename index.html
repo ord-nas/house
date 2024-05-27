@@ -8,7 +8,7 @@
              padding: 0;
              margin: 0;
          }
-             
+
          li {
              padding-left: 1rem;
              text-indent: -0.7rem;
@@ -155,7 +155,7 @@
          var global_photo_frame_mode = false;
          var global_photo_frame_images = new Array(21).fill(null);
          var global_photo_frame_cursor = 0;
-         
+
          var global_started = false;
 
          function continue_sitting_at(node, {text = null, image = null, mark_on_done = null} = {}) {
@@ -1186,7 +1186,7 @@
                  if (this.last_event_finish_time === null) {
                      this.last_event_finish_time = new Date().getTime();
                  }
-                 
+
                  if (this.event !== null) {
                      // Animate the currently-active event.
                      const done = this.event.tick(current_time, layer);
@@ -1246,7 +1246,7 @@
              const canvas_top = canvas.offsetTop + canvas.clientTop;
              const x = event.pageX - canvas_left;
              const y = event.pageY - canvas_top;
-             
+
              if (global_started === false) {
                  global_started = true;
                  set_up_animation_loop(world);
@@ -1272,7 +1272,7 @@
                      }
                  } else if (in_bounding_box(x, y, 1250, 470, 145, 145)) {
                      // Right arrow.
-                     global_photo_frame_cursor = (global_photo_frame_cursor + 1) % global_photo_frame_images.length;                     
+                     global_photo_frame_cursor = (global_photo_frame_cursor + 1) % global_photo_frame_images.length;
                  } else if (in_bounding_box(x, y, 1230, 20, 165, 160)) {
                      // Close.
                      global_photo_frame_mode = false;
@@ -1366,7 +1366,7 @@
 
              ctx.drawImage(img, frame_x + x_offset, frame_y + y_offset, scale * img.width, scale * img.height);
          }
-         
+
          function set_up_animation_loop(world) {
              var canvas = document.getElementById("c");
              var ctx = canvas.getContext("2d");
