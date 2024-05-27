@@ -132,6 +132,7 @@
          };
 
          var global_photo_frame_mode = false;
+         var global_photo_frame_images = new Array(21).fill(null);
 
          function continue_sitting_at(node, {text = null, image = null} = {}) {
              const seated_node = node + "_seated";
@@ -1519,6 +1520,15 @@
          var global_world = null;
 
          function main() {
+             // Start background loading of photo frame images.
+             for (var i = 0; i < global_photo_frame_images.length; i += 1) {
+                 const local_i = i;
+                 const local_image = new Image();
+                 local_image.src = "imgs/photo_frame/" + i + ".jpg";
+                 local_image.onload = () => { global_photo_frame_images[local_i] = local_image };
+             }
+
+             // Block on loading all the UI images, then set up animation.
              load_images().then((images) => {
                  const world = {
                      images: images,
