@@ -1197,6 +1197,11 @@
              }
          }
 
+         function in_bounding_box(click_x, click_y, box_x, box_y, width, height) {
+             return click_x >= box_x && click_x <= box_x + width &&
+                    click_y >= box_y && click_y <= box_y + height;
+         }
+
          function animate(world, current_time, layer) {
              // Animate the people.
              for (var [name, person] of Object.entries(world.people)) {
@@ -1257,14 +1262,14 @@
              // Animate the currently-active event, if any.
              world.event_manager.tick(current_time, layer);
          }
-
+         
          function set_up_animation_loop(world) {
+             var canvas = document.getElementById("c");
+             var ctx = canvas.getContext("2d");
              function tick() {
                  const current_time = new Date().getTime();
 
                  // Clear.
-                 var canvas = document.getElementById("c");
-                 var ctx = canvas.getContext("2d");
                  ctx.resetTransform();
                  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1289,6 +1294,22 @@
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
+
+             const canvas_left = canvas.offsetLeft + canvas.clientLeft;
+             const canvas_top = canvas.offsetTop + canvas.clientTop;
+             canvas.addEventListener('click', function(event) {
+                 const x = event.pageX - canvas_left;
+                 const y = event.pageY - canvas_top;
+                 if (in_bounding_box(x, y, 398, 538, 55, 54) ||
+                     in_bounding_box(x, y, 630, 575, 50, 45) ||
+                     in_bounding_box(x, y, 688, 575, 50, 45) ||
+                     in_bounding_box(x, y, 745, 575, 50, 45) ||
+                     in_bounding_box(x, y, 233, 833, 88, 55) ||
+                     in_bounding_box(x, y, 423, 930, 22, 18) ||
+                     in_bounding_box(x, y, 1038, 555, 30, 28)) {
+                     alert('picture frame');
+                 }
+             });
          }
 
          function dinner_event(world, cook_name) {
