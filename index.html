@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
+        <style>
+         ul {
+             list-style: none;
+             padding: 0;
+             margin: 0;
+         }
+             
+         li {
+             padding-left: 1rem;
+             text-indent: -0.7rem;
+         }
+
+         li.done::before {
+             content: "✔️ ";
+         }
+
+         li.not-done::before {
+             content: "❌ ";
+         }
+        </style>
         <script type="text/javascript">
          const global_image_urls = {
              steve: "imgs/people/steve/Steve Head.png",
@@ -131,11 +152,11 @@
              ]
          };
 
-         var global_photo_frame_mode = true;
+         var global_photo_frame_mode = false;
          var global_photo_frame_images = new Array(21).fill(null);
          var global_photo_frame_cursor = 0;
 
-         function continue_sitting_at(node, {text = null, image = null} = {}) {
+         function continue_sitting_at(node, {text = null, image = null, mark_on_done = null} = {}) {
              const seated_node = node + "_seated";
              return (world, person) => {
                  var speech = null;
@@ -148,7 +169,7 @@
                      new WalkAni(person.params, node, seated_node, {layer: "behind_table"}),
                      new ContinueMotionAni(person.params, seated_node, {layer: "behind_table", speech: speech}),
                      new WalkAni(person.params, seated_node, node, {layer: "behind_table"}),
-                 ]);
+                 ], mark_on_done);
              };
          }
 
@@ -162,7 +183,7 @@
                          new TvFlickerAni(),
                      ]),
                      new WalkAni(person.params, seated_node, node, {layer: "behind_table"}),
-                 ]);
+                 ], mark_on_done="tv-cl");
              };
          }
 
@@ -177,20 +198,20 @@
                      new StopMotionAni(person.params, "gym_bar", {
                          layer: "behind_table", draw_fn: draw_weight_lifting, speech: world.images.biceps}),
                      new StartMotionAni(person.params, "gym_bar"),
-                 ]);
+                 ], mark_on_done="gym-cl");
              };
          }
 
          const global_simple_targets = {
-             "living_chair_1": continue_sitting_at("living_chair_1"),
-             "living_chair_2": continue_sitting_at("living_chair_2"),
-             "living_chair_3": continue_sitting_at("living_chair_3"),
-             "desk_1": continue_sitting_at("desk_1", {image: "work"}),
-             "desk_2": continue_sitting_at("desk_2", {image: "work"}),
+             "living_chair_1": continue_sitting_at("living_chair_1", {mark_on_done: "couch-cl"}),
+             "living_chair_2": continue_sitting_at("living_chair_2", {mark_on_done: "couch-cl"}),
+             "living_chair_3": continue_sitting_at("living_chair_3", {mark_on_done: "couch-cl"}),
+             "desk_1": continue_sitting_at("desk_1", {image: "work", mark_on_done: "desk-cl"}),
+             "desk_2": continue_sitting_at("desk_2", {image: "work", mark_on_done: "desk-cl"}),
              "tv_chair_1": watch_tv_at("tv_chair_1"),
              "tv_chair_2": watch_tv_at("tv_chair_2"),
              "gym_bar": lift_weights(),
-             "gym_bike": continue_sitting_at("gym_bike", {image: "biking"}),
+             "gym_bike": continue_sitting_at("gym_bike", {image: "biking", mark_on_done: "gym-cl"}),
          };
 
          function get_held_resources(world) {
@@ -997,9 +1018,10 @@
          }
 
          class SequentialAni {
-             constructor(sequence) {
+             constructor(sequence, mark_on_done = null) {
                  this.sequence = sequence;
                  this.current = 0;
+                 this.mark_on_done = mark_on_done;
              }
 
              tick(current_time, layer) {
@@ -1008,7 +1030,13 @@
                  if (next && this.current < this.sequence.length) {
                      this.current += 1;
                  }
-                 return this.current >= this.sequence.length;
+                 const done = this.current >= this.sequence.length;
+                 if (done && this.mark_on_done !== null) {
+                     var e = document.getElementById(this.mark_on_done);
+                     e.classList.remove("not-done");
+                     e.classList.add("done");
+                 }
+                 return done;
              }
 
              request_done() {
@@ -1163,7 +1191,7 @@
                      }
                  } else {
                      // Maybe set up a new event.
-                     if (current_time - this.last_event_finish_time > 50000) {
+                     if (current_time - this.last_event_finish_time > 30000) {
                          this.event = this.create_event();
                          console.log("installed event!");
                      }
@@ -1223,6 +1251,9 @@
                      in_bounding_box(x, y, 423, 930, 22, 18) ||
                      in_bounding_box(x, y, 1038, 555, 30, 28)) {
                      global_photo_frame_mode = true;
+                     var e = document.getElementById("photo-cl");
+                     e.classList.remove("not-done");
+                     e.classList.add("done");
                  }
              } else {
                  if (in_bounding_box(x, y, 340, 470, 150, 143)) {
@@ -1431,7 +1462,7 @@
                      new ContinueMotionAni(person.params, chair_node_seated, {duration: 8000, speech: world.images.savor, layer: "behind_table"}),
                      new WalkToAni(person, chair_node, {layer: "behind_table"}),
                      new ContinueMotionAni(person.params, chair_node, {duration: 0}),
-                 ]);
+                 ], mark_on_done="dinner-cl");
              }
 
              return new Event(world, [stage_1, stage_2, stage_3, stage_4, stage_5]);
@@ -1477,7 +1508,7 @@
                  [top_name]: new SequentialAni([
                      new HookupAni(world, top.params, "bed_2", draw_topping),
                      new StartMotionAni(top.params, "bed_2"),
-                 ]),
+                 ], mark_on_done="hookup-cl"),
              }, {
                  [host_name]: new ContinueMotionAni(host.params, host_will_top ? "bed_2" : "bed_1", {
                      duration: 0, speech: world.images.wave}),
@@ -1543,7 +1574,7 @@
                      new ContinueMotionAni(ticket.params, "ticket_center", {draw_fn: draw_ticket, speech: event_name, duration: 2000}),
                      new WalkToAni(ticket, "ticket_offscreen_right", {draw_fn: draw_ticket, speech: event_name}),
                      new ContinueMotionAni(ticket.params, "ticket_offscreen_right", {draw_fn: draw_ticket, speech: event_name, duration: 0}),
-                 ]),
+                 ], mark_on_done="party-cl"),
              }];
 
              return new Event(world, stages);
@@ -1633,6 +1664,26 @@
         </script>
     </head>
     <body>
+        <h1>F** Park</h1>
+        <h3>(censored to avoid <a href="https://news.ycombinator.com/item?id=9966118">angering GitHub Pages</a>)</h3>
+        <p>Even if we can't be together in real life, we can be together virtually!</p>
+        <p>Maybe this is even a preview of things to come (although honestly for that to happen, Carlos probably has to either break his lease or break up with his boy 😬)</p>
+        <p>This mostly isn't an interactive site; stuff just happens as you watch.</p>
+        <p>Here are some things to see:</p>
+        <ul>
+            <li class="not-done" id="gym-cl">Someone uses the gym</li>
+            <li class="not-done" id="desk-cl">Someone works at the desks</li>
+            <li class="not-done" id="tv-cl">Someone watches TV</li>
+            <li class="not-done" id="couch-cl">Someone hangs out on the couches</li>
+            <li class="not-done" id="hookup-cl">A special guest arrives</li>
+            <li class="not-done" id="dinner-cl">Dinner time</li>
+            <li class="not-done" id="party-cl">Going out</li>
+            <li class="not-done" id="photo-cl">Okay this one is a tiny bit interactive: find the one clickable thing in the house</li>
+        </ul>
+        <p>
+            If you watch for about 5 minutes, you'll probably have seen everything there is to see (the checklist above will keep track for you).
+            Slight variations will continue to happen after that.
+        </p>
         <canvas id="c" width="1750px" height="1100px"> </canvas>
     </body>
 </html>
