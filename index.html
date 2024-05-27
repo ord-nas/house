@@ -23,6 +23,7 @@
              pill: "imgs/pill.png",
              drink: "imgs/drink.png",
              dancing: "imgs/dancing.png",
+             frame: "imgs/Frame UI.png",
          };
 
          const global_motion_graph = {
@@ -129,6 +130,8 @@
                  ["desk_1", "desk_2"],
              ]
          };
+
+         var global_photo_frame_mode = false;
 
          function continue_sitting_at(node, {text = null, image = null} = {}) {
              const seated_node = node + "_seated";
@@ -1291,6 +1294,23 @@
                  // Animate default layer.
                  animate(world, current_time, /*layer=*/"");
 
+                 // Maybe draw photo frame.
+                 if (global_photo_frame_mode) {
+                     ctx.resetTransform();
+                     ctx.scale(1.2, 1.2);
+                     ctx.drawImage(world.images.frame, 275, 0);
+
+                     ctx.resetTransform();
+                     ctx.lineWidth = 4;
+                     ctx.strokeStyle = "yellow";
+                     // Left
+                     ctx.strokeRect(340, 470, 150, 143);
+                     // Right
+                     ctx.strokeRect(1250, 470, 145, 145);
+                     // Close
+                     ctx.strokeRect(1230, 20, 165, 160);
+                 }
+
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
@@ -1300,14 +1320,17 @@
              canvas.addEventListener('click', function(event) {
                  const x = event.pageX - canvas_left;
                  const y = event.pageY - canvas_top;
-                 if (in_bounding_box(x, y, 398, 538, 55, 54) ||
-                     in_bounding_box(x, y, 630, 575, 50, 45) ||
-                     in_bounding_box(x, y, 688, 575, 50, 45) ||
-                     in_bounding_box(x, y, 745, 575, 50, 45) ||
-                     in_bounding_box(x, y, 233, 833, 88, 55) ||
-                     in_bounding_box(x, y, 423, 930, 22, 18) ||
-                     in_bounding_box(x, y, 1038, 555, 30, 28)) {
-                     alert('picture frame');
+                 if (global_photo_frame_mode === false
+                     && (
+                         in_bounding_box(x, y, 398, 538, 55, 54) ||
+                         in_bounding_box(x, y, 630, 575, 50, 45) ||
+                         in_bounding_box(x, y, 688, 575, 50, 45) ||
+                         in_bounding_box(x, y, 745, 575, 50, 45) ||
+                         in_bounding_box(x, y, 233, 833, 88, 55) ||
+                         in_bounding_box(x, y, 423, 930, 22, 18) ||
+                         in_bounding_box(x, y, 1038, 555, 30, 28)
+                     )) {
+                     global_photo_frame_mode = true;
                  }
              });
          }
