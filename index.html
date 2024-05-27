@@ -131,8 +131,9 @@
              ]
          };
 
-         var global_photo_frame_mode = false;
+         var global_photo_frame_mode = true;
          var global_photo_frame_images = new Array(21).fill(null);
+         var global_photo_frame_cursor = 0;
 
          function continue_sitting_at(node, {text = null, image = null} = {}) {
              const seated_node = node + "_seated";
@@ -1206,6 +1207,40 @@
                     click_y >= box_y && click_y <= box_y + height;
          }
 
+         function handle_canvas_click(event) {
+             const canvas = document.getElementById("c");
+             const canvas_left = canvas.offsetLeft + canvas.clientLeft;
+             const canvas_top = canvas.offsetTop + canvas.clientTop;
+             const x = event.pageX - canvas_left;
+             const y = event.pageY - canvas_top;
+             
+             if (global_photo_frame_mode === false) {
+                 if (in_bounding_box(x, y, 398, 538, 55, 54) ||
+                     in_bounding_box(x, y, 630, 575, 50, 45) ||
+                     in_bounding_box(x, y, 688, 575, 50, 45) ||
+                     in_bounding_box(x, y, 745, 575, 50, 45) ||
+                     in_bounding_box(x, y, 233, 833, 88, 55) ||
+                     in_bounding_box(x, y, 423, 930, 22, 18) ||
+                     in_bounding_box(x, y, 1038, 555, 30, 28)) {
+                     global_photo_frame_mode = true;
+                 }
+             } else {
+                 if (in_bounding_box(x, y, 340, 470, 150, 143)) {
+                     // Left arrow.
+                     global_photo_frame_cursor -= 1;
+                     if (global_photo_frame_cursor < 0) {
+                         global_photo_frame_cursor += global_photo_frame_images.length;
+                     }
+                 } else if (in_bounding_box(x, y, 1250, 470, 145, 145)) {
+                     // Right arrow.
+                     global_photo_frame_cursor = (global_photo_frame_cursor + 1) % global_photo_frame_images.length;                     
+                 } else if (in_bounding_box(x, y, 1230, 20, 165, 160)) {
+                     // Close.
+                     global_photo_frame_mode = false;
+                 }
+             }
+         }
+
          function animate(world, current_time, layer) {
              // Animate the people.
              for (var [name, person] of Object.entries(world.people)) {
@@ -1266,6 +1301,32 @@
              // Animate the currently-active event, if any.
              world.event_manager.tick(current_time, layer);
          }
+
+         function draw_photo_frame(world, ctx) {
+             ctx.resetTransform();
+             ctx.scale(1.2, 1.2);
+             ctx.drawImage(world.images.frame, 275, 0);
+
+             ctx.resetTransform();
+
+             const img = global_photo_frame_images[global_photo_frame_cursor];
+             if (img === null || img === undefined) {
+                 return;
+             }
+
+             const frame_x = 487;
+             const frame_y = 158;
+             const frame_width = 762;
+             const frame_height = 762;
+
+             const width_scale = frame_width / img.width;
+             const height_scale = frame_height / img.height;
+             const scale = Math.min(width_scale, height_scale);
+             const x_offset = (frame_width - (img.width * scale)) / 2.0;
+             const y_offset = (frame_height - (img.height * scale)) / 2.0;
+
+             ctx.drawImage(img, frame_x + x_offset, frame_y + y_offset, scale * img.width, scale * img.height);
+         }
          
          function set_up_animation_loop(world) {
              var canvas = document.getElementById("c");
@@ -1297,43 +1358,14 @@
 
                  // Maybe draw photo frame.
                  if (global_photo_frame_mode) {
-                     ctx.resetTransform();
-                     ctx.scale(1.2, 1.2);
-                     ctx.drawImage(world.images.frame, 275, 0);
-
-                     ctx.resetTransform();
-                     ctx.lineWidth = 4;
-                     ctx.strokeStyle = "yellow";
-                     // Left
-                     ctx.strokeRect(340, 470, 150, 143);
-                     // Right
-                     ctx.strokeRect(1250, 470, 145, 145);
-                     // Close
-                     ctx.strokeRect(1230, 20, 165, 160);
+                     draw_photo_frame(world, ctx);
                  }
 
                  window.requestAnimationFrame(tick);
              }
              window.requestAnimationFrame(tick);
 
-             const canvas_left = canvas.offsetLeft + canvas.clientLeft;
-             const canvas_top = canvas.offsetTop + canvas.clientTop;
-             canvas.addEventListener('click', function(event) {
-                 const x = event.pageX - canvas_left;
-                 const y = event.pageY - canvas_top;
-                 if (global_photo_frame_mode === false
-                     && (
-                         in_bounding_box(x, y, 398, 538, 55, 54) ||
-                         in_bounding_box(x, y, 630, 575, 50, 45) ||
-                         in_bounding_box(x, y, 688, 575, 50, 45) ||
-                         in_bounding_box(x, y, 745, 575, 50, 45) ||
-                         in_bounding_box(x, y, 233, 833, 88, 55) ||
-                         in_bounding_box(x, y, 423, 930, 22, 18) ||
-                         in_bounding_box(x, y, 1038, 555, 30, 28)
-                     )) {
-                     global_photo_frame_mode = true;
-                 }
-             });
+             canvas.addEventListener('click', handle_canvas_click);
          }
 
          function dinner_event(world, cook_name) {
