@@ -537,7 +537,7 @@
              if (params.speech !== null && params.speech !== undefined) {
                  ctx.fillStyle = "white";
                  ctx.strokeStyle = "black";
-                 ctx.font = "75px Inter";
+                 ctx.font = "80px Arial";
                  const x_base = 50 + 70 + 170/2;
                  var speech_width = 0;
                  var speech_height = 0;
@@ -765,7 +765,7 @@
              ctx.drawImage(params.head_image, base_x, base_y);
 
              ctx.fillStyle = "white";
-             ctx.font = "175px Inter";
+             ctx.font = "175px Arial";
              const measure = ctx.measureText(params.speech);
              const width = measure.width;
              const height = measure.actualBoundingBoxAscent + measure.actualBoundingBoxDescent;
@@ -1675,7 +1675,7 @@
                  ctx.fillStyle = "white";
                  ctx.fillRect(175, 520, 1375, 185);
                  ctx.fillStyle = "red";
-                 ctx.font = "110px Inter";
+                 ctx.font = "127px Arial";
                  ctx.fillText("Click Anywhere to Start", 185, 650);
 
                  // Set up click handler.
